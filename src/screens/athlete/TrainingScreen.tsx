@@ -1,0 +1,27 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+
+export default function TrainingScreen() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Training</Text>
+      <Text style={styles.sub}>Your drills and sessions will appear here.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+    padding: 24,
+    paddingTop: 60,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  sub: { fontSize: 14, color: '#888' },
+});
