@@ -141,9 +141,12 @@ export type ApiResponse<T = unknown> = ApiSuccessResponse<T> | ApiErrorResponse;
 // ─── Auth types ───────────────────────────────────────────────────────────────
 
 export interface JwtPayload {
-  sub: string;
+  userId: string;
   email: string;
   role: UserRole;
+  subscriptionPlan: SubscriptionPlan;
+  isVerified: boolean;
+  athleteId?: string; // included when role === 'athlete' to avoid extra DB lookup
   iat?: number;
   exp?: number;
 }
@@ -154,9 +157,25 @@ export interface AuthTokens {
 }
 
 export interface AuthResponse {
-  user: Omit<User, 'passwordHash'>;
+  user: {
+    id: string;
+    email: string;
+    role: UserRole;
+    isVerified: boolean;
+    createdAt: Date;
+  };
   accessToken: string;
   refreshToken: string;
+}
+
+export interface RegisterProfileData {
+  // Athlete
+  ageGroup?: string;
+  primaryEvent?: string;
+  trainingDaysPerWeek?: number;
+  // Coach
+  clubName?: string;
+  bio?: string;
 }
 
 // ─── Request augmentation ────────────────────────────────────────────────────

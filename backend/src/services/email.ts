@@ -78,3 +78,40 @@ export async function sendWelcome(to: string, role: string): Promise<void> {
     `,
   });
 }
+
+export async function sendVerificationEmail(
+  to: string,
+  token: string,
+): Promise<void> {
+  const url = `${process.env.APP_URL ?? 'https://app.sprintfastest.com'}/verify-email?token=${token}`;
+  await send({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject: 'Verify your SprintFastest email address',
+    html: `
+      <h2>Verify your email</h2>
+      <p>Click the link below to verify your email address. This link expires in 24 hours.</p>
+      <a href="${url}">Verify Email</a>
+      <p>If you didn't create an account, ignore this email.</p>
+    `,
+  });
+}
+
+export async function sendParentConsentRequest(
+  parentEmail: string,
+  athleteEmail: string,
+  linkCode: string,
+): Promise<void> {
+  await send({
+    from: process.env.EMAIL_FROM,
+    to: parentEmail,
+    subject: 'SprintFastest — parent consent required',
+    html: `
+      <h2>Parent / guardian consent needed</h2>
+      <p>An account for <strong>${athleteEmail}</strong> (U11 age group) has been created on SprintFastest.</p>
+      <p>Because this athlete is under 13, a parent or guardian must link their account before the athlete can sign in.</p>
+      <p>Your link code: <strong>${linkCode}</strong></p>
+      <p>This code expires in 48 hours. Enter it in the SprintFastest app under "Link Athlete".</p>
+    `,
+  });
+}

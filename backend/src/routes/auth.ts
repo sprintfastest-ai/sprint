@@ -1,67 +1,51 @@
 import { Router } from 'express';
-import { body } from 'express-validator';
 import { validate } from '@/middleware/validate';
 import { authenticate } from '@/middleware/auth';
 import { authLimiter } from '@/middleware/rateLimiter';
 import {
-  register,
-  login,
-  refresh,
-  logout,
-  me,
-  forgotPassword,
-} from '@/controllers/authController';
+  validateRegister,
+  validateLogin,
+  validateRefreshToken,
+  validateVerifyEmail,
+  validateRequestReset,
+  validateResetPassword,
+  validateLogout,
+} from '@/middleware/validate';
+import {
+  registerHandler,
+  loginHandler,
+  refreshHandler,
+  verifyEmailHandler,
+  requestResetHandler,
+  resetPasswordHandler,
+  logoutHandler,
+  meHandler,
+} from '@/controllers/auth.controller';
 
 const router = Router();
 
-const PASSWORD_RULES = body('password')
-  .isLength({ min: 8 })
-  .withMessage('Password must be at least 8 characters');
+// POST /api/v1/auth/register
+router.post('/register', authLimiter, validateRegister, validate, registerHandler);
 
-const EMAIL_RULES = body('email')
-  .isEmail()
-  .normalizeEmail()
-  .withMessage('Valid email required');
+// POST /api/v1/auth/login
+router.post('/login', authLimiter, validateLogin, validate, loginHandler);
 
-router.post(
-  '/register',
-  authLimiter,
-  EMAIL_RULES,
-  PASSWORD_RULES,
-  body('role')
-    .isIn(['athlete', 'parent', 'coach'])
-    .withMessage('Role must be athlete, parent, or coach'),
-  validate,
-  register,
-);
+// POST /api/v1/auth/refresh
+router.post('/refresh', authLimiter, validateRefreshToken, validate, refreshHandler);
 
-router.post(
-  '/login',
-  authLimiter,
-  EMAIL_RULES,
-  PASSWORD_RULES,
-  validate,
-  login,
-);
+// POST /api/v1/auth/verify-email
+router.post('/verify-email', validateVerifyEmail, validate, verifyEmailHandler);
 
-router.post(
-  '/refresh',
-  authLimiter,
-  body('refreshToken').notEmpty().withMessage('refreshToken required'),
-  validate,
-  refresh,
-);
+// POST /api/v1/auth/request-reset
+router.post('/request-reset', authLimiter, validateRequestReset, validate, requestResetHandler);
 
-router.post('/logout', logout);
+// POST /api/v1/auth/reset-password
+router.post('/reset-password', validateResetPassword, validate, resetPasswordHandler);
 
-router.get('/me', authenticate, me);
+// DELETE /api/v1/auth/logout
+router.delete('/logout', validateLogout, validate, logoutHandler);
 
-router.post(
-  '/forgot-password',
-  authLimiter,
-  EMAIL_RULES,
-  validate,
-  forgotPassword,
-);
+// GET /api/v1/auth/me  (protected)
+router.get('/me', authenticate, meHandler);
 
 export default router;
