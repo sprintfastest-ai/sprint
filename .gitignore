@@ -1,12 +1,71 @@
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# Expo
 .expo/
 dist/
 web-build/
+expo-env.d.ts
+
+# Native build output
+ios/build/
+ios/Pods/
+ios/DerivedData/
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
 *.orig.*
+
+# Environment variables
 .env
 .env.local
+.env.development
+.env.staging
+.env.production
+.env.*.local
+
+# EAS
+.easignore
+
+# macOS
+.DS_Store
+*.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+
+# Turbo (monorepo)
+.turbo/
+
+# Backend (Node.js)
+backend/node_modules/
+backend/dist/
+backend/.env
+
+# Misc
+.cache/
+tmp/
