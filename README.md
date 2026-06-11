@@ -1,4 +1,4 @@
-# SprintIQ
+# SprintFastest
 
 AI-powered sprint training platform for youth track & field athletes. Delivers personalised weekly training plans, weakness diagnosis, audio coaching cues, a parent dashboard, and a coach override layer — all through a React Native mobile app backed by a Node.js API.
 
@@ -83,7 +83,7 @@ Create a `.env` file at the project root. **Never commit real values.**
 
 | Variable | Used by | Description |
 |---|---|---|
-| `EXPO_PUBLIC_API_BASE_URL` | Mobile app | Base URL of the SprintIQ REST API |
+| `EXPO_PUBLIC_API_BASE_URL` | Mobile app | Base URL of the SprintFastest REST API |
 | `EXPO_PUBLIC_WEBSOCKET_URL` | Mobile app | WebSocket server URL for real-time events |
 
 Backend environment variables (set in `backend/.env` or Render dashboard):
