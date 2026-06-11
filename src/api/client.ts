@@ -3,8 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/utils/constants';
 
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: '@sprintfastest:access_token',
-  REFRESH_TOKEN: '@sprintfastest:refresh_token',
+  ACCESS_TOKEN: '@sprintiq:access_token',
+  REFRESH_TOKEN: '@sprintiq:refresh_token',
 } as const;
 
 const client = axios.create({

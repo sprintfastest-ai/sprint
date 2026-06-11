@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SprintFastest",
-    "slug": "sprintfastest",
+    "name": "SprintIQ",
+    "slug": "sprintiq",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
@@ -13,14 +13,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.sprintfastest.app"
+      "bundleIdentifier": "com.sprintiq.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#0a0a0a"
       },
-      "package": "com.sprintfastest.app"
+      "package": "com.sprintiq.app"
     },
     "web": {
       "favicon": "./src/assets/favicon.png"

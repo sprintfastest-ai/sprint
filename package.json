@@ -1,7 +1,7 @@
 {
-  "name": "sprintfastest",
+  "name": "sprintiq",
   "version": "1.0.0",
-  "main": "App.tsx",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -34,10 +34,7 @@
     "typescript": "^5.3.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "babel-plugin-module-resolver": "^5.0.2",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react": "^7.34.0",
-    "eslint-plugin-react-native": "^4.1.0"
+    "eslint": "^8.57.0"
   },
   "private": true
 }

@@ -32,7 +32,7 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.title}>SprintFastest</Text>
+      <Text style={styles.title}>SprintIQ</Text>
       <Text style={styles.subtitle}>Track. Train. Dominate.</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <TextInput
