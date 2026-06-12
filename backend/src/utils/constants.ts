@@ -25,6 +25,9 @@ export const ERROR_CODES = {
   EMAIL_ERROR: 'EMAIL_ERROR',
   // Rate limiting
   RATE_LIMITED: 'RATE_LIMITED',
+  // Subscriptions / feature access
+  PREMIUM_REQUIRED: 'PREMIUM_REQUIRED',
+  INVALID_WEBHOOK_SIGNATURE: 'INVALID_WEBHOOK_SIGNATURE',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
@@ -36,3 +39,34 @@ export const WEAKNESS_TYPES = [
   'top_speed',
   'speed_endurance',
 ] as const;
+
+/**
+ * Feature flag keys — used as the `feature` column value in feature_access
+ * and as the argument to requireAccess() middleware.
+ */
+export const enum FEATURES {
+  TRAINING_PLAN      = 'training_plan',
+  DIAGNOSIS          = 'diagnosis',
+  CHAT_COACH         = 'chat_coach',
+  AUDIO_COACHING     = 'audio_coaching',
+  LEADERBOARD        = 'leaderboard',
+  PARENT_DASHBOARD   = 'parent_dashboard',
+  COACH_DASHBOARD    = 'coach_dashboard',
+  RACE_TAPER         = 'race_taper',
+  RE_DIAGNOSIS       = 're_diagnosis',
+  PERFORMANCE_TRACKER = 'performance_tracker',
+}
+
+/**
+ * Features that are available on the free tier.
+ * These are never blocked by requireAccess() — they are noted here for
+ * documentation and for the access.service.ts short-circuit.
+ *
+ * Enforcement of free-tier *limits* (e.g. 1 plan, 1 diagnosis) happens
+ * inside the relevant service, not here.
+ */
+export const FREE_TIER_FEATURES: ReadonlySet<FEATURES> = new Set([
+  FEATURES.TRAINING_PLAN,       // 1 week per rolling period — enforced at plan generation
+  FEATURES.DIAGNOSIS,           // 1 diagnosis — enforced at diagnosis creation
+  FEATURES.PERFORMANCE_TRACKER, // always free, no limit
+]);
