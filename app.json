@@ -20,7 +20,11 @@
         "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#0a0a0a"
       },
-      "package": "com.sprintfastest.app"
+      "package": "com.sprintfastest.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
@@ -38,8 +42,10 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
-      }
-    }
+        "projectId": "8beb4e8a-2aa3-4c74-9c81-091060c939eb"
+      },
+      "router": {}
+    },
+    "owner": "sprintfastest"
   }
 }
