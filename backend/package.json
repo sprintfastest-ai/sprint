@@ -7,7 +7,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "migrate": "ts-node src/db/migrate.ts",
+    "migrate": "ts-node -r tsconfig-paths/register src/db/migrate.ts",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts"
   },
@@ -43,6 +43,7 @@
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.57.0",
     "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.4.5"
   },
   "engines": {

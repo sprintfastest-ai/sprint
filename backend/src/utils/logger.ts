@@ -1,25 +1,15 @@
-import winston from 'winston';
+const isProd = process.env.NODE_ENV === 'production';
 
-const { combine, timestamp, json, colorize, simple, errors } = winston.format;
+function fmt(level: string, msg: string, meta?: unknown): string {
+  const ts = new Date().toISOString();
+  const base = `[${ts}] ${level}: ${msg}`;
+  return meta !== undefined ? `${base} ${JSON.stringify(meta)}` : base;
+}
 
-const isProduction = process.env.NODE_ENV === 'production';
-
-const logger = winston.createLogger({
-  level: isProduction ? 'info' : 'debug',
-  format: combine(
-    errors({ stack: true }),
-    timestamp(),
-    json(),
-  ),
-  defaultMeta: { service: 'sprintfastest-api' },
-  transports: [
-    new winston.transports.Console({
-      format: isProduction
-        ? combine(timestamp(), json())
-        : combine(colorize(), simple()),
-      silent: false,
-    }),
-  ],
-});
-
+export const logger = {
+  info:  (msg: string, meta?: unknown) => console.log(fmt('INFO',  msg, meta)),
+  warn:  (msg: string, meta?: unknown) => console.warn(fmt('WARN',  msg, meta)),
+  error: (msg: string, meta?: unknown) => console.error(fmt('ERROR', msg, meta)),
+  debug: (msg: string, meta?: unknown) => { if (!isProd) console.debug(fmt('DEBUG', msg, meta)); },
+};
 export default logger;
