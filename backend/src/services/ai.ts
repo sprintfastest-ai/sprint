@@ -129,7 +129,7 @@ Return ONLY the cue text, no quotes, no explanation.
 }
 
 export async function chatWithCoach(
-  userId: string,
+  _userId: string,
   message: string,
   history: Array<{ role: 'user' | 'model'; parts: [{ text: string }] }>,
 ): Promise<string> {

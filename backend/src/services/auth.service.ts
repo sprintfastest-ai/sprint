@@ -12,12 +12,10 @@ import {
   deleteAllRefreshTokensForUser,
 } from '@/db/queries/users';
 import {
-  createAthleteProfile,
   findAthleteProfileByUserId,
 } from '@/db/queries/athletes';
-import { createCoachProfile } from '@/db/queries/coaches';
-import { createParentProfile, createParentAthleteLink } from '@/db/queries/parents';
-import { upsertSubscription, isPremium } from '@/db/queries/subscriptions';
+import { createParentAthleteLink } from '@/db/queries/parents';
+import { isPremium } from '@/db/queries/subscriptions';
 import {
   generateJWT,
   generateRefreshToken,
@@ -32,7 +30,7 @@ import {
 import { AppError } from '@/middleware/errorHandler';
 import { ERROR_CODES } from '@/utils/constants';
 import logger from '@/utils/logger';
-import type { RegisterProfileData, JwtPayload, UserRole, SubscriptionPlan } from '@/types';
+import type { RegisterProfileData, UserRole, SubscriptionPlan } from '@/types';
 
 const BCRYPT_ROUNDS = 12;
 const UNDER_13_AGE_GROUP = 'U11';

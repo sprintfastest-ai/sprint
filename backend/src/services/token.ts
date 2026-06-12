@@ -24,9 +24,10 @@ export function generateJWT(params: {
     isVerified: params.isVerified,
     ...(params.athleteId ? { athleteId: params.athleteId } : {}),
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return jwt.sign(payload, process.env.JWT_SECRET as string, {
-    expiresIn: ACCESS_EXPIRES as string,
-  });
+    expiresIn: ACCESS_EXPIRES,
+  } as any);
 }
 
 export async function generateRefreshToken(userId: string): Promise<string> {
