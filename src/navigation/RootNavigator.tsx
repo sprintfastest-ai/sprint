@@ -1,20 +1,39 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
+import { setOnSignOut } from '@/api/client';
 import type { RootStackParamList } from './types';
 import AuthNavigator from './AuthNavigator';
 import AthleteNavigator from './AthleteNavigator';
 import CoachNavigator from './CoachNavigator';
 import ParentNavigator from './ParentNavigator';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  const { isAuthenticated, user, restoreSession } = useAuthStore();
+  const { isAuthenticated, isLoading, user, restoreSession, logout } =
+    useAuthStore();
+
+  // Register the forced sign-out hook once so the Axios interceptor can clear
+  // state and navigate back to login when the refresh token expires.
+  const handleForcedSignOut = useCallback(() => {
+    logout().catch(() => undefined);
+  }, [logout]);
+
+  useEffect(() => {
+    setOnSignOut(handleForcedSignOut);
+  }, [handleForcedSignOut]);
 
   useEffect(() => {
     restoreSession();
   }, [restoreSession]);
+
+  // Show a full-screen spinner while we determine auth state on cold start.
+  // This prevents a flash of the login screen for users with a valid session.
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
 
   const getInitialRoute = (): keyof RootStackParamList => {
     if (!isAuthenticated) return 'Auth';

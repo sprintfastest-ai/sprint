@@ -26,7 +26,7 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     try {
-      await register(email, password, role);
+      await register({ email, password, role });
     } catch {}
   };
 

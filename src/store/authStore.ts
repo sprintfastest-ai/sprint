@@ -1,27 +1,36 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authApi } from '@/api/auth';
+import * as authApi from '@/api/auth.api';
+import type { RegisterPayload } from '@/api/auth.api';
 import { STORAGE_KEYS } from '@/api/client';
 import type { User } from '@/types';
 
+// Re-export so callers can import the type from here if needed
+export type { RegisterPayload };
+
 interface AuthState {
   user: User | null;
+  /** Raw JWT stored here for components that need it (e.g. WebSocket). */
+  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+
   login: (email: string, password: string) => Promise<void>;
-  register: (
-    email: string,
-    password: string,
-    role: User['role'],
-  ) => Promise<void>;
+  register: (data: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
+  /**
+   * Called on app startup — reads tokens from AsyncStorage, calls /auth/me
+   * to validate. The axios interceptor transparently refreshes the access
+   * token if it has expired, so no manual refresh logic is needed here.
+   */
   restoreSession: () => Promise<void>;
   clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
+  accessToken: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -29,25 +38,40 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const { user } = await authApi.login({ email, password });
-      set({ user, isAuthenticated: true });
+      const { user, accessToken, refreshToken } = await authApi.login(
+        email,
+        password,
+      );
+      await AsyncStorage.multiSet([
+        [STORAGE_KEYS.ACCESS_TOKEN, accessToken],
+        [STORAGE_KEYS.REFRESH_TOKEN, refreshToken],
+      ]);
+      set({ user, accessToken, isAuthenticated: true });
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Login failed' });
+      const message =
+        err instanceof Error ? err.message : 'Login failed. Please try again.';
+      set({ error: message });
       throw err;
     } finally {
       set({ isLoading: false });
     }
   },
 
-  register: async (email, password, role) => {
+  register: async (data: RegisterPayload) => {
     set({ isLoading: true, error: null });
     try {
-      const { user } = await authApi.register({ email, password, role });
-      set({ user, isAuthenticated: true });
+      const { user, accessToken, refreshToken } = await authApi.register(data);
+      await AsyncStorage.multiSet([
+        [STORAGE_KEYS.ACCESS_TOKEN, accessToken],
+        [STORAGE_KEYS.REFRESH_TOKEN, refreshToken],
+      ]);
+      set({ user, accessToken, isAuthenticated: true });
     } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Registration failed',
-      });
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Registration failed. Please try again.';
+      set({ error: message });
       throw err;
     } finally {
       set({ isLoading: false });
@@ -57,27 +81,43 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     set({ isLoading: true });
     try {
-      await authApi.logout();
+      // Best-effort server-side token revocation — don't block UI on failure
+      await authApi.logout().catch(() => undefined);
     } finally {
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.ACCESS_TOKEN,
+        STORAGE_KEYS.REFRESH_TOKEN,
+      ]);
+      set({
+        user: null,
+        accessToken: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
     }
   },
 
   restoreSession: async () => {
     set({ isLoading: true });
     try {
-      const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      if (!token) {
-        set({ isLoading: false });
-        return;
-      }
+      const storedToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      if (!storedToken) return;
+
+      // /auth/me will 401 if expired; the axios interceptor will silently
+      // refresh and retry, so we get a valid user back either way.
       const user = await authApi.me();
-      set({ user, isAuthenticated: true });
+      // Re-read the (possibly refreshed) token from storage
+      const currentToken = await AsyncStorage.getItem(
+        STORAGE_KEYS.ACCESS_TOKEN,
+      );
+      set({ user, accessToken: currentToken, isAuthenticated: true });
     } catch {
+      // Token invalid / refresh failed — start unauthenticated
       await AsyncStorage.multiRemove([
         STORAGE_KEYS.ACCESS_TOKEN,
         STORAGE_KEYS.REFRESH_TOKEN,
       ]);
+      set({ user: null, accessToken: null, isAuthenticated: false });
     } finally {
       set({ isLoading: false });
     }

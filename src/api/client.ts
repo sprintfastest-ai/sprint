@@ -1,18 +1,30 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '@/utils/constants';
 
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: '@sprintfastest:access_token',
   REFRESH_TOKEN: '@sprintfastest:refresh_token',
 } as const;
 
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? 'https://api.sprintfastest.com/v1';
+
+const APP_VERSION = '1.0.0';
+
+// Registered by RootNavigator — called when a forced sign-out occurs (refresh
+// token expired / revoked) so the app can navigate back to the auth stack.
+let _onSignOut: (() => void) | null = null;
+export function setOnSignOut(cb: () => void): void {
+  _onSignOut = cb;
+}
+
 const client = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 15_000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    'X-App-Version': APP_VERSION,
   },
 });
 
@@ -83,6 +95,7 @@ client.interceptors.response.use(
           STORAGE_KEYS.ACCESS_TOKEN,
           STORAGE_KEYS.REFRESH_TOKEN,
         ]);
+        _onSignOut?.();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
