@@ -11,7 +11,7 @@ export async function sendMessage(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const userId = req.user?.sub;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
     const { content } = req.body as { content: string };
@@ -28,7 +28,7 @@ export async function sendMessage(
       .reverse()
       .map((m: { role: string; content: string }) => ({
         role: m.role === 'user' ? ('user' as const) : ('model' as const),
-        parts: [{ text: m.content }],
+        parts: [{ text: m.content }] as [{ text: string }],
       }));
 
     // Store user message
@@ -57,7 +57,7 @@ export async function getChatHistory(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const userId = req.user?.sub;
+    const userId = req.user?.userId;
     if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
     const { rows } = await pool.query(

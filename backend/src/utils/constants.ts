@@ -44,7 +44,7 @@ export const WEAKNESS_TYPES = [
  * Feature flag keys — used as the `feature` column value in feature_access
  * and as the argument to requireAccess() middleware.
  */
-export const enum FEATURES {
+export enum FEATURES {
   TRAINING_PLAN      = 'training_plan',
   DIAGNOSIS          = 'diagnosis',
   CHAT_COACH         = 'chat_coach',

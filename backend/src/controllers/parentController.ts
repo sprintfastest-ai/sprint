@@ -10,7 +10,7 @@ export async function getLinkedAthletes(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const parentId = req.user?.sub;
+    const parentId = req.user?.userId;
     if (!parentId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
     const { rows } = await pool.query(
@@ -34,7 +34,7 @@ export async function getAthleteProgress(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const parentId = req.user?.sub;
+    const parentId = req.user?.userId;
     const { athleteId } = req.params as { athleteId: string };
 
     // Verify the parent is linked to this athlete

@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import logger from '@/utils/logger';
 import { AppError } from '@/middleware/errorHandler';
 import { ERROR_CODES } from '@/utils/constants';
-import type { TrainingPlan, Diagnosis, Drill, WeaknessType } from '@/types';
+import type { TrainingPlan, Diagnosis, WeaknessType } from '@/types';
 
 let genAI: GoogleGenerativeAI | null = null;
 

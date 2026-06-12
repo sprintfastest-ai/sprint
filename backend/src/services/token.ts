@@ -4,7 +4,6 @@ import { storeRefreshToken as dbStoreRefreshToken, findRefreshToken, deleteRefre
 import type { JwtPayload, SubscriptionPlan, UserRole } from '@/types';
 
 const ACCESS_EXPIRES  = process.env.JWT_ACCESS_EXPIRES_IN  ?? '15m';
-const REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES_IN ?? '30d';
 const REFRESH_EXPIRES_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // ─── Signing ─────────────────────────────────────────────────────────────────
@@ -26,7 +25,7 @@ export function generateJWT(params: {
     ...(params.athleteId ? { athleteId: params.athleteId } : {}),
   };
   return jwt.sign(payload, process.env.JWT_SECRET as string, {
-    expiresIn: ACCESS_EXPIRES,
+    expiresIn: ACCESS_EXPIRES as string,
   });
 }
 
@@ -55,4 +54,25 @@ export async function validateStoredRefreshToken(
 export async function revokeRefreshToken(token: string): Promise<void> {
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   await deleteRefreshToken(tokenHash);
+}
+
+// ─── Convenience aliases used by authController ───────────────────────────────
+
+export async function issueTokens(
+  userId: string,
+  email: string,
+  role: UserRole,
+  subscriptionPlan: SubscriptionPlan = 'free',
+  isVerified = false,
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const accessToken = generateJWT({ userId, email, role, subscriptionPlan, isVerified });
+  const refreshToken = await generateRefreshToken(userId);
+  return { accessToken, refreshToken };
+}
+
+// generateRefreshToken already persists the token hash in the DB.
+// This shim exists so authController can call storeRefreshToken without changes.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function storeRefreshToken(_userId: string, _token: string): Promise<void> {
+  // no-op: storage is handled inside generateRefreshToken
 }

@@ -35,13 +35,13 @@ export async function register(
 
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await createUser(email, passwordHash, role);
-    const tokens = issueTokens(user.id, user.email, user.role);
+    const tokens = await issueTokens(user.id, user.email, user.role);
     await storeRefreshToken(user.id, tokens.refreshToken);
 
     // Fire-and-forget welcome email
     sendWelcome(email, role).catch(() => null);
 
-    const { passwordHash: _ph, ...safeUser } = user;
+    const { password_hash: _ph, ...safeUser } = user;
     sendSuccess(res, { user: safeUser, ...tokens }, 201);
   } catch (err) {
     next(err);
@@ -61,15 +61,15 @@ export async function login(
       throw new AppError('Invalid email or password', ERROR_CODES.INVALID_CREDENTIALS, 401);
     }
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
+    const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       throw new AppError('Invalid email or password', ERROR_CODES.INVALID_CREDENTIALS, 401);
     }
 
-    const tokens = issueTokens(user.id, user.email, user.role);
+    const tokens = await issueTokens(user.id, user.email, user.role);
     await storeRefreshToken(user.id, tokens.refreshToken);
 
-    const { passwordHash: _ph, ...safeUser } = user;
+    const { password_hash: _ph, ...safeUser } = user;
     sendSuccess(res, { user: safeUser, ...tokens });
   } catch (err) {
     next(err);
@@ -92,8 +92,8 @@ export async function refresh(
     const payload = verifyRefreshToken(refreshToken);
     await revokeRefreshToken(refreshToken);
 
-    const tokens = issueTokens(payload.sub, payload.email, payload.role);
-    await storeRefreshToken(payload.sub, tokens.refreshToken);
+    const tokens = await issueTokens(payload.userId, payload.email, payload.role);
+    await storeRefreshToken(payload.userId, tokens.refreshToken);
 
     sendSuccess(res, tokens);
   } catch (err) {
@@ -125,7 +125,7 @@ export async function me(
   try {
     const { rows } = await pool.query(
       'SELECT id, email, role, created_at FROM users WHERE id = $1',
-      [req.user?.sub],
+      [req.user?.userId],
     );
     if (!rows[0]) {
       throw new AppError('User not found', ERROR_CODES.NOT_FOUND, 404);

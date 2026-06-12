@@ -187,7 +187,7 @@ export async function getDiagnosisHistory(
 // ─── Guard ────────────────────────────────────────────────────────────────────
 
 function assertCanAccessAthlete(req: Request, athleteId: string): void {
-  const { role, sub } = req.user ?? {};
+  const { role, userId: sub } = req.user ?? {};
   if (role === 'admin') return;
   if (role === 'athlete' && sub === athleteId) return;
   if (role === 'coach' || role === 'parent') return; // further scoping done at DB layer

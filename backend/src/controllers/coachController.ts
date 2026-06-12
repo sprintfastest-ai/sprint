@@ -42,7 +42,7 @@ export async function overridePlan(
       days: TrainingDay[];
     };
 
-    const coachId = req.user?.sub;
+    const coachId = req.user?.userId;
     if (!coachId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
     const plan = await insertPlan({
@@ -70,7 +70,7 @@ export async function addNote(
       content: string;
       isVisibleToAthlete: boolean;
     };
-    const coachId = req.user?.sub;
+    const coachId = req.user?.userId;
     if (!coachId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
     const { rows } = await pool.query(
@@ -109,7 +109,7 @@ export async function getNotes(
 }
 
 function assertIsCoach(req: Request, coachId: string): void {
-  const { role, sub } = req.user ?? {};
+  const { role, userId: sub } = req.user ?? {};
   if (role === 'admin') return;
   if (role === 'coach' && sub === coachId) return;
   throw new AppError('Forbidden', ERROR_CODES.FORBIDDEN, 403);

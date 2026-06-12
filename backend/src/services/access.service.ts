@@ -9,8 +9,7 @@ import {
   upsertSubscription,
   type SubscriptionRow,
 } from '@/db/queries/subscriptions';
-import { AppError } from '@/middleware/errorHandler';
-import { FEATURES, FREE_TIER_FEATURES, ERROR_CODES } from '@/utils/constants';
+import { FEATURES, FREE_TIER_FEATURES } from '@/utils/constants';
 import logger from '@/utils/logger';
 
 // ─── Feature access check ─────────────────────────────────────────────────────
