@@ -14,6 +14,8 @@ import { ChatCoach } from "./pages/ChatCoach";
 import { ProgressTracker } from "./pages/ProgressTracker";
 import { LogTime } from "./pages/LogTime";
 import { Achievements } from "./pages/Achievements";
+import { ForgotPasswordScreen } from "./pages/ForgotPasswordScreen";
+import { ResetPasswordScreen } from "./pages/ResetPasswordScreen";
 
 export const router = createBrowserRouter([
   {
@@ -33,7 +35,9 @@ export const router = createBrowserRouter([
       { path: "chat-coach",        Component: ChatCoach        },
       { path: "progress-tracker",  Component: ProgressTracker  },
       { path: "log-time",          Component: LogTime          },
-      { path: "achievements",      Component: Achievements     },
+      { path: "achievements",      Component: Achievements          },
+      { path: "forgot-password",   Component: ForgotPasswordScreen  },
+      { path: "reset-password",    Component: ResetPasswordScreen   },
     ],
   },
 ]);

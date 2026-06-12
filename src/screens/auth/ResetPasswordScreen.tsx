@@ -71,6 +71,20 @@ export default function ResetPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Nav bar — back chevron + centred title, matches Register pattern */}
+      <View style={styles.navBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.navBack}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
+          <Text style={styles.navBackChevron}>‹</Text>
+        </TouchableOpacity>
+        <Text style={styles.navTitle}>New Password</Text>
+      </View>
+
       <KeyboardAvoidingView
         style={styles.kav}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -214,11 +228,35 @@ export default function ResetPasswordScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
+  navBar: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.lg,
+    position: 'relative',
+  },
+  navBack: {
+    position: 'absolute',
+    left: SPACING.lg,
+    padding: 4,
+  },
+  navBackChevron: {
+    fontSize: 32,
+    lineHeight: 36,
+    color: COLORS.primary,
+    fontWeight: '300',
+  },
+  navTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
   kav: { flex: 1 },
   scroll: {
     flexGrow: 1,
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xxl,
+    paddingTop: SPACING.lg,
     paddingBottom: SPACING.xl,
   },
 

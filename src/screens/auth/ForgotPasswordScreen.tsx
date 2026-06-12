@@ -12,16 +12,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { requestPasswordReset } from '@/api/auth.api';
+import type { AuthStackParamList } from '@/navigation/types';
 import { COLORS, FONT, RADIUS, SPACING } from '@/utils/tokens';
 
+type NavProp = NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
+
 export default function ForgotPasswordScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavProp>();
 
   const [email, setEmail]       = useState('');
   const [isLoading, setLoading] = useState(false);
   const [sent, setSent]         = useState(false);
   const [error, setError]       = useState<string | null>(null);
+  const [focused, setFocused]   = useState(false);
 
   const handleSubmit = async () => {
     setError(null);
@@ -51,49 +56,77 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backBtn}
-            accessibilityLabel="Go back to login"
-            accessibilityRole="button"
-          >
-            <Text style={styles.backText}>← Log In</Text>
-          </TouchableOpacity>
+          {/* Branding block — 213px, matches Login layout */}
+          <View style={styles.brandingBlock}>
+            <View style={styles.wordmarkRow}>
+              <Text style={styles.bolt}>⚡</Text>
+              <Text style={styles.wordmark}>SprintFastest</Text>
+            </View>
+            <View style={styles.accentLine} />
+            <Text style={styles.tagline}>Your AI Sprint Coach</Text>
+          </View>
 
-          <View style={styles.card}>
+          {/* Form */}
+          <View style={styles.formArea}>
             {sent ? (
+              /* ── Success state ── */
               <View
-                style={styles.successContainer}
                 accessibilityLiveRegion="polite"
                 accessibilityRole="alert"
               >
-                <Text style={styles.successIcon}>✉️</Text>
-                <Text style={styles.successTitle}>Check your email</Text>
-                <Text style={styles.successBody}>
-                  If an account exists for{' '}
-                  <Text style={styles.successEmail}>{email}</Text>, you'll
-                  receive a reset link within a few minutes.
+                <View style={styles.successBanner}>
+                  <Text style={styles.successBannerIcon}>✉️</Text>
+                  <View style={styles.successBannerText}>
+                    <Text style={styles.successBannerTitle}>Check your email</Text>
+                    <Text style={styles.successBannerBody}>
+                      We sent a reset link to{' '}
+                      <Text style={styles.successEmail}>{email || 'your email'}</Text>
+                      . It expires in 30 minutes.
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.hint}>
+                  Didn't receive it? Check your spam folder or tap below to resend.
                 </Text>
+
                 <TouchableOpacity
-                  onPress={() => navigation.goBack()}
-                  style={styles.backToLoginBtn}
-                  accessibilityLabel="Back to login"
+                  style={styles.resendBtn}
+                  onPress={() => { setSent(false); }}
+                  accessibilityLabel="Resend email"
                   accessibilityRole="button"
                 >
-                  <Text style={styles.backToLoginText}>Back to Log In</Text>
+                  <Text style={styles.resendBtnText}>Resend Email</Text>
                 </TouchableOpacity>
+
+                <View style={styles.loginRow}>
+                  <Text style={styles.loginPrompt}>Remember your password? </Text>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Login')}
+                    accessibilityLabel="Go to login"
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.loginLink}>Log In</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
+              /* ── Form state ── */
               <>
                 <Text style={styles.title}>Reset Password</Text>
                 <Text style={styles.body}>
-                  Enter your email address and we'll send you a link to reset
-                  your password.
+                  Enter your email address and we'll send you a link to reset your password.
                 </Text>
 
-                <Text style={styles.label}>Email</Text>
+                <Text style={[styles.label, focused && styles.labelFocused]}>
+                  Email address
+                </Text>
                 <TextInput
-                  style={[styles.input, error ? styles.inputError : null]}
+                  style={[
+                    styles.input,
+                    focused && styles.inputFocused,
+                    error ? styles.inputError : null,
+                  ]}
                   value={email}
                   onChangeText={(v) => { setEmail(v); setError(null); }}
                   placeholder="you@example.com"
@@ -103,6 +136,8 @@ export default function ForgotPasswordScreen() {
                   autoCorrect={false}
                   autoComplete="email"
                   returnKeyType="send"
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
                   onSubmitEditing={handleSubmit}
                   accessibilityLabel="Email address for password reset"
                 />
@@ -122,6 +157,17 @@ export default function ForgotPasswordScreen() {
                     <Text style={styles.submitBtnText}>Send Reset Link</Text>
                   )}
                 </TouchableOpacity>
+
+                <View style={styles.loginRow}>
+                  <Text style={styles.loginPrompt}>Remember your password? </Text>
+                  <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    accessibilityLabel="Go back to login"
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.loginLink}>Log In</Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </View>
@@ -132,55 +178,83 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
+  safe: { flex: 1, backgroundColor: COLORS.surface },
   kav: { flex: 1 },
   scroll: {
     flexGrow: 1,
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.lg,
     paddingBottom: SPACING.xl,
   },
 
-  backBtn: { marginBottom: SPACING.md },
-  backText: { fontSize: 14, color: COLORS.primary, fontWeight: '600' },
-
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 2,
+  // Branding block — 213px tall, matches Login
+  brandingBlock: {
+    height: 213,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wordmarkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  bolt: { fontSize: 28 },
+  wordmark: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: COLORS.primary,
+    letterSpacing: -0.8,
+  },
+  accentLine: {
+    width: 220,
+    height: 2,
+    backgroundColor: COLORS.orange,
+    borderRadius: 2,
+    marginBottom: 12,
+  },
+  tagline: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '400',
   },
 
-  title: { ...FONT.h2, color: COLORS.textPrimary, marginBottom: SPACING.sm },
+  // Form area
+  formArea: { paddingHorizontal: 20 },
+
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: 8,
+    lineHeight: 29,
+  },
   body: {
-    ...FONT.body,
+    fontSize: 14,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.lg,
-    lineHeight: 24,
+    lineHeight: 22,
+    marginBottom: 24,
   },
 
   label: {
     fontSize: 12,
     fontWeight: '600',
     color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: SPACING.xs,
+    marginBottom: 6,
   },
+  labelFocused: { color: COLORS.primary },
   input: {
+    height: 48,
     backgroundColor: COLORS.inputBg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 14,
-    fontSize: 16,
+    borderRadius: RADIUS.btn,
+    paddingHorizontal: 14,
+    fontSize: 15,
     color: COLORS.textPrimary,
     marginBottom: SPACING.xs,
+  },
+  inputFocused: {
+    borderWidth: 2,
+    borderColor: COLORS.primary,
   },
   inputError: { borderColor: COLORS.error },
   fieldError: {
@@ -191,39 +265,71 @@ const styles = StyleSheet.create({
   },
 
   submitBtn: {
+    height: 48,
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.md,
-    paddingVertical: 15,
     alignItems: 'center',
-    marginTop: SPACING.md,
-    minHeight: 52,
     justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 20,
   },
   btnDisabled: { opacity: 0.5 },
   submitBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 
-  // Success state
-  successContainer: { alignItems: 'center', paddingVertical: SPACING.xl },
-  successIcon: { fontSize: 48, marginBottom: SPACING.md },
-  successTitle: {
-    ...FONT.h2,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.sm,
-    textAlign: 'center',
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  successBody: {
-    ...FONT.body,
+  loginPrompt: { fontSize: 14, color: COLORS.textSecondary },
+  loginLink: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
+
+  // Success banner — orange style matching Figma
+  successBanner: {
+    backgroundColor: COLORS.orangeLight,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.orange,
+    borderRadius: 12,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 28,
+  },
+  successBannerIcon: { fontSize: 24, lineHeight: 28 },
+  successBannerText: { flex: 1 },
+  successBannerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  successBannerBody: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  successEmail: { fontWeight: '600', color: COLORS.textPrimary },
+
+  hint: {
+    fontSize: 13,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: SPACING.xl,
+    lineHeight: 21,
+    marginBottom: 28,
   },
-  successEmail: { fontWeight: '700', color: COLORS.textPrimary },
-  backToLoginBtn: {
-    backgroundColor: COLORS.primary,
+
+  resendBtn: {
+    height: 48,
     borderRadius: RADIUS.md,
-    paddingVertical: 13,
-    paddingHorizontal: SPACING.xl,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  backToLoginText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  resendBtnText: { fontSize: 15, fontWeight: '600', color: COLORS.primary },
 });
