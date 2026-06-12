@@ -13,6 +13,8 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  /** token comes from the deep-link query param ?token=<jwt> */
+  ResetPassword: { token: string };
 };
 
 export type AthleteTabParamList = {
