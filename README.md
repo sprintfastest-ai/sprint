@@ -140,3 +140,4 @@ Add the Render deploy hook URL in: **GitHub repo → Settings → Secrets and va
 | `npm run web` | Open in browser |
 | `npm run lint` | Run ESLint across `src/` |
 | `npm run type-check` | Run TypeScript compiler check |
+
