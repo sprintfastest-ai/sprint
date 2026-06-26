@@ -20,7 +20,7 @@
     "expo-av": "~15.0.2",
     "expo-notifications": "~0.29.14",
     "expo-status-bar": "~2.2.0",
-    "react": "19.0.0",
+    "react": "19.1.0",
     "react-native": "0.81.4",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-reanimated": "~3.17.4",
@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
-    "@types/react": "~19.0.0",
+    "@types/react": "~19.1.0",
     "babel-plugin-module-resolver": "^5.0.0",
     "babel-preset-expo": "~12.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
