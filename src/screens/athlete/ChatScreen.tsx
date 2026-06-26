@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,98 +9,324 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { useAuthStore } from '@/store/authStore';
 import { chatApi } from '@/api/chat';
-import { useAuth } from '@/hooks/useAuth';
 import type { ChatMessage } from '@/types';
 
-export default function ChatScreen() {
-  const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+const COLORS = {
+  primary: '#1A6BB5',
+  orange: '#F05A1A',
+  text: '#1A1A1A',
+  grey: '#6B7280',
+  border: '#E0E0E0',
+  surface: '#FFFFFF',
+  bg: '#F8F9FA',
+};
 
-  const sendMessage = async () => {
-    if (!input.trim() || !user) return;
-    const content = input.trim();
+const SEED_MESSAGES: ChatMessage[] = [
+  {
+    id: '1',
+    userId: 'user',
+    role: 'user',
+    content: 'What drills should I do to improve my acceleration?',
+    timestamp: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    userId: 'ai',
+    role: 'assistant',
+    content: 'Great question! For acceleration focus on:\n\n1. Wall Drives — 3×10 each leg. Drive through 45°.\n2. A-Skips — 4×20m. Knee height and arm drive.\n3. Block Starts into 30m — 5 runs, full recovery.\n\nHow does your start feel currently?',
+    timestamp: new Date().toISOString(),
+  },
+];
+
+export default function ChatScreen() {
+  const navigation = useNavigation();
+  const user = useAuthStore((s) => s.user);
+  const [messages, setMessages] = useState<ChatMessage[]>(SEED_MESSAGES);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const flatRef = useRef<FlatList>(null);
+
+  const scrollToEnd = useCallback(() => {
+    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+  }, []);
+
+  useEffect(() => {
+    setTimeout(() => flatRef.current?.scrollToEnd({ animated: false }), 100);
+  }, []);
+
+  const sendMessage = useCallback(async () => {
+    const text = input.trim();
+    if (!text || !user) return;
+
+    const userMsg: ChatMessage = {
+      id: String(Date.now()),
+      userId: user.id,
+      role: 'user',
+      content: text,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
-    setIsLoading(true);
+    setIsTyping(true);
+    scrollToEnd();
+
     try {
-      const reply = await chatApi.sendMessage(user.id, content);
+      const reply = await chatApi.sendMessage(user.id, text);
       setMessages((prev) => [...prev, reply]);
+    } catch {
+      const fallback: ChatMessage = {
+        id: String(Date.now() + 1),
+        userId: 'ai',
+        role: 'assistant',
+        content: "I'm having trouble connecting right now. Please try again in a moment.",
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, fallback]);
     } finally {
-      setIsLoading(false);
+      setIsTyping(false);
+      scrollToEnd();
     }
-  };
+  }, [input, user, scrollToEnd]);
+
+  const renderItem = useCallback(({ item }: { item: ChatMessage }) => {
+    if (item.role === 'user') {
+      return <UserBubble text={item.content} />;
+    }
+    return <AIBubble text={item.content} />;
+  }, []);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Text style={styles.title}>AI Coach</Text>
-      <FlatList
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.bubble,
-              item.role === 'user' ? styles.userBubble : styles.aiBubble,
-            ]}
-          >
-            <Text style={styles.bubbleText}>{item.content}</Text>
-          </View>
-        )}
-        contentContainerStyle={styles.list}
-      />
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="Ask your coach…"
-          placeholderTextColor="#666"
-          value={input}
-          onChangeText={setInput}
-        />
-        <TouchableOpacity
-          style={styles.sendBtn}
-          onPress={sendMessage}
-          disabled={isLoading}
-        >
-          <Text style={styles.sendText}>Send</Text>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityLabel="Go back">
+          <Text style={styles.backChevron}>{'‹'}</Text>
         </TouchableOpacity>
+
+        <View style={styles.headerCenter} pointerEvents="none">
+          <Text style={styles.headerTitle}>AI Coach</Text>
+          <Text style={styles.robotEmoji}>🤖</Text>
+        </View>
+
+        <View style={styles.premiumBadge}>
+          <Text style={styles.premiumText}>PREMIUM</Text>
+        </View>
       </View>
-    </KeyboardAvoidingView>
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <FlatList
+          ref={flatRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.chatContent}
+          onContentSizeChange={scrollToEnd}
+          ListHeaderComponent={<DateDivider label="Today" />}
+          ListFooterComponent={isTyping ? <TypingRow /> : null}
+        />
+
+        {/* Input bar */}
+        <View style={styles.inputBar}>
+          <TouchableOpacity style={styles.micBtn} disabled accessibilityLabel="Voice input (coming soon)">
+            <Text style={{ fontSize: 20, opacity: 0.4 }}>🎤</Text>
+          </TouchableOpacity>
+
+          <TextInput
+            style={styles.textInput}
+            value={input}
+            onChangeText={setInput}
+            placeholder="Ask your coach..."
+            placeholderTextColor={COLORS.grey}
+            returnKeyType="send"
+            onSubmitEditing={sendMessage}
+          />
+
+          <TouchableOpacity
+            style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
+            onPress={sendMessage}
+            disabled={!input.trim()}
+            accessibilityLabel="Send message"
+          >
+            <Text style={styles.sendIcon}>{'↑'}</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function DateDivider({ label }: { label: string }) {
+  return (
+    <View style={styles.dividerRow}>
+      <View style={styles.dividerLine} />
+      <Text style={styles.dividerLabel}>{label}</Text>
+      <View style={styles.dividerLine} />
+    </View>
+  );
+}
+
+function UserBubble({ text }: { text: string }) {
+  return (
+    <View style={styles.userRow}>
+      <View style={styles.userBubble}>
+        <Text style={styles.userBubbleText}>{text}</Text>
+      </View>
+    </View>
+  );
+}
+
+function AIBubble({ text }: { text: string }) {
+  return (
+    <View style={styles.aiRow}>
+      <View style={styles.aiAvatar}>
+        <Text style={styles.aiAvatarText}>AI</Text>
+      </View>
+      <View style={styles.aiBubble}>
+        <Text style={styles.aiBubbleText}>{text}</Text>
+      </View>
+    </View>
+  );
+}
+
+function TypingRow() {
+  return (
+    <View style={[styles.aiRow, { marginTop: 14 }]}>
+      <View style={styles.aiAvatar}>
+        <Text style={styles.aiAvatarText}>AI</Text>
+      </View>
+      <View style={[styles.aiBubble, { borderColor: COLORS.primary, borderWidth: 1.5 }]}>
+        <View style={{ flexDirection: 'row', gap: 5 }}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: COLORS.primary, opacity: 0.6 }} />
+          ))}
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0a' },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#fff',
-    padding: 24,
-    paddingTop: 60,
+  safe: { flex: 1, backgroundColor: COLORS.surface },
+
+  header: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  list: { padding: 16, gap: 8 },
-  bubble: { maxWidth: '80%', borderRadius: 16, padding: 12 },
-  userBubble: { backgroundColor: '#ff6b35', alignSelf: 'flex-end' },
-  aiBubble: { backgroundColor: '#1a1a1a', alignSelf: 'flex-start' },
-  bubbleText: { color: '#fff', fontSize: 15 },
-  inputRow: { flexDirection: 'row', padding: 16, gap: 8 },
-  input: {
+  backBtn: { padding: 4, paddingRight: 8 },
+  backChevron: { fontSize: 32, color: COLORS.primary, lineHeight: 36 },
+  headerCenter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  robotEmoji: { fontSize: 18 },
+  premiumBadge: {
+    marginLeft: 'auto',
+    backgroundColor: COLORS.orange,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  premiumText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.6 },
+
+  chatContent: { padding: 14, paddingBottom: 8, gap: 14 },
+
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
+  dividerLabel: { fontSize: 11, color: COLORS.grey, fontWeight: '500' },
+
+  userRow: { alignItems: 'flex-end' },
+  userBubble: {
+    maxWidth: '78%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    borderBottomRightRadius: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  userBubbleText: { fontSize: 14, color: '#FFFFFF', lineHeight: 21 },
+
+  aiRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  aiAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginBottom: 18,
+  },
+  aiAvatarText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
+  aiBubble: {
+    maxWidth: '78%',
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  aiBubbleText: { fontSize: 14, color: COLORS.text, lineHeight: 22 },
+
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  micBtn: { padding: 6 },
+  textInput: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 14,
-    color: '#fff',
-    fontSize: 15,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bg,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: COLORS.text,
   },
   sendBtn: {
-    backgroundColor: '#ff6b35',
-    borderRadius: 12,
-    paddingHorizontal: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  sendText: { color: '#fff', fontWeight: '700' },
+  sendBtnDisabled: { backgroundColor: COLORS.border },
+  sendIcon: { fontSize: 18, color: '#FFFFFF', fontWeight: '700' },
 });
