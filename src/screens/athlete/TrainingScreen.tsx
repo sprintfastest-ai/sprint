@@ -60,7 +60,7 @@ const DRILLS: Drill[] = [
 ];
 
 export default function TrainingScreen() {
-  const [selectedDay, setSelectedDay] = useState(0);
+  const [_selectedDay, setSelectedDay] = useState(0);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [completed, setCompleted] = useState(false);
 

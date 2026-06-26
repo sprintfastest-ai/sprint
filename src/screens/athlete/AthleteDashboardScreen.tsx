@@ -177,9 +177,6 @@ export default function AthleteDashboardScreen() {
 function RingProgress({ value, max }: { value: number; max: number }) {
   const size = 72;
   const strokeW = 9;
-  const r = (size - strokeW * 2) / 2;
-  const circ = 2 * Math.PI * r;
-  const filled = (value / max) * circ;
   const complete = value >= max;
 
   return (
