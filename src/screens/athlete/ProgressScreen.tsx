@@ -45,9 +45,10 @@ export default function ProgressScreen() {
 
   useEffect(() => {
     if (!user) return;
+    const athleteId = user.athleteId ?? user.id;
     setIsLoading(true);
     trainingApi
-      .getPersonalBests(user.id)
+      .getPersonalBests(athleteId)
       .then(setPbs)
       .catch(() => undefined)
       .finally(() => setIsLoading(false));

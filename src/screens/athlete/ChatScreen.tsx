@@ -45,7 +45,7 @@ const SEED_MESSAGES: ChatMessage[] = [
 export default function ChatScreen() {
   const navigation = useNavigation();
   const user = useAuthStore((s) => s.user);
-  const [messages, setMessages] = useState<ChatMessage[]>(SEED_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const flatRef = useRef<FlatList>(null);
@@ -55,7 +55,12 @@ export default function ChatScreen() {
   }, []);
 
   useEffect(() => {
-    setTimeout(() => flatRef.current?.scrollToEnd({ animated: false }), 100);
+    chatApi.getHistory().then((history) => {
+      setMessages(history.length > 0 ? history : SEED_MESSAGES);
+      setTimeout(() => flatRef.current?.scrollToEnd({ animated: false }), 150);
+    }).catch(() => {
+      setMessages(SEED_MESSAGES);
+    });
   }, []);
 
   const sendMessage = useCallback(async () => {
@@ -75,7 +80,7 @@ export default function ChatScreen() {
     scrollToEnd();
 
     try {
-      const reply = await chatApi.sendMessage(user.id, text);
+      const reply = await chatApi.sendMessage(text);
       setMessages((prev) => [...prev, reply]);
     } catch {
       const fallback: ChatMessage = {

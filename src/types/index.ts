@@ -3,6 +3,9 @@ export interface User {
   email: string;
   role: 'athlete' | 'parent' | 'coach' | 'admin';
   createdAt: string;
+  athleteId?: string;
+  subscriptionPlan?: 'free' | 'premium';
+  isVerified?: boolean;
 }
 
 export interface AthleteProfile {

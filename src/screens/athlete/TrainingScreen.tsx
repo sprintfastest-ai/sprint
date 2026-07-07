@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,12 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/store/authStore';
+import { trainingApi } from '@/api/training';
+import type { TrainingPlan, TrainingDay, Drill } from '@/types';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -28,57 +32,76 @@ const COLORS = {
   blueLight: '#F5F9FF',
 };
 
-type DayState = 'active' | 'completed' | 'upcoming';
+const DAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-interface Day {
-  abbr: string;
-  date: number;
-  state: DayState;
+function getWeekStartDate(): string {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const monday = new Date(d.setDate(diff));
+  return monday.toISOString().split('T')[0];
 }
-
-interface Drill {
-  name: string;
-  detail: string;
-  cue: string;
-}
-
-const DAYS: Day[] = [
-  { abbr: 'Mon', date: 2,  state: 'active'    },
-  { abbr: 'Tue', date: 3,  state: 'completed' },
-  { abbr: 'Wed', date: 4,  state: 'upcoming'  },
-  { abbr: 'Thu', date: 5,  state: 'upcoming'  },
-  { abbr: 'Fri', date: 6,  state: 'upcoming'  },
-  { abbr: 'Sat', date: 7,  state: 'upcoming'  },
-  { abbr: 'Sun', date: 8,  state: 'upcoming'  },
-];
-
-const DRILLS: Drill[] = [
-  { name: 'A-Skip',       detail: '4 sets × 20m',    cue: 'Drive your knees high'           },
-  { name: 'Wall Drives',  detail: '3 sets × 10 reps', cue: 'Stay at 45 degrees'             },
-  { name: 'Block Starts', detail: '5 runs × 30m',    cue: 'Explosive first 3 steps'         },
-  { name: 'Flying 30s',   detail: '4 runs × 30m',    cue: 'Reach top speed before the cone' },
-];
 
 export default function TrainingScreen() {
-  const [_selectedDay, setSelectedDay] = useState(0);
+  const user = useAuthStore((s) => s.user);
+  const [plan, setPlan] = useState<TrainingPlan | null>(null);
+  const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const athleteId = user?.athleteId ?? user?.id;
+    if (!athleteId) return;
+    const weekStart = getWeekStartDate();
+    trainingApi.getWeeklyPlan(athleteId, weekStart)
+      .then((p) => {
+        setPlan(p);
+        // Auto-select today's day (0=Mon in plan)
+        const todayJS = new Date().getDay(); // 0=Sun
+        const todayPlan = todayJS === 0 ? 6 : todayJS - 1;
+        setSelectedDayIdx(Math.min(todayPlan, p.days.length - 1));
+      })
+      .catch(() => setError('Could not load training plan'))
+      .finally(() => setLoading(false));
+  }, [user]);
 
   const handleToggle = useCallback((idx: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded((prev) => (prev === idx ? null : idx));
   }, []);
 
-  const handleComplete = useCallback(() => {
+  const handleComplete = useCallback(async () => {
+    if (!plan || !user) return;
+    const athleteId = user.athleteId ?? user.id;
     setCompleted(true);
-  }, []);
+    try {
+      await trainingApi.completeSession(athleteId, plan.id, []);
+    } catch {
+      // best-effort — UI already reflects complete
+    }
+  }, [plan, user]);
+
+  const weekStart = plan ? new Date(plan.weekStartDate) : new Date();
+  const weekLabel = weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+  const todayDay: TrainingDay | undefined = plan?.days[selectedDayIdx];
+
+  const drillDetail = (drill: Drill) => {
+    const parts: string[] = [];
+    if (drill.sets) parts.push(`${drill.sets} sets`);
+    if (drill.reps) parts.push(`× ${drill.reps} reps`);
+    if (drill.distance) parts.push(`× ${drill.distance}m`);
+    return parts.join(' ') || '';
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Training Plan</Text>
-        <Text style={styles.headerSub}>Week of 2 Jun</Text>
+        <Text style={styles.headerSub}>Week of {weekLabel}</Text>
 
         {/* Day strip */}
         <ScrollView
@@ -86,123 +109,113 @@ export default function TrainingScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.dayStrip}
         >
-          {DAYS.map((day, i) => {
-            const isActive    = day.state === 'active';
-            const isCompleted = day.state === 'completed';
+          {(plan?.days ?? Array.from({ length: 7 }, (_, i) => ({ dayNumber: i + 1, sessionType: '', drills: [], coachingCues: [] }))).map((_day, i) => {
+            const isActive = i === selectedDayIdx;
+            const dayDate = new Date(weekStart);
+            dayDate.setDate(dayDate.getDate() + i);
+            const abbr = DAY_ABBRS[dayDate.getDay()];
+            const dateNum = dayDate.getDate();
             return (
               <TouchableOpacity
-                key={day.abbr}
-                onPress={() => setSelectedDay(i)}
-                style={[
-                  styles.dayPill,
-                  isActive    && styles.dayPillActive,
-                  isCompleted && styles.dayPillCompleted,
-                ]}
-                accessibilityLabel={`${day.abbr} ${day.date}`}
+                key={i}
+                onPress={() => { setSelectedDayIdx(i); setExpanded(null); }}
+                style={[styles.dayPill, isActive && styles.dayPillActive]}
+                accessibilityLabel={`${abbr} ${dateNum}`}
               >
-                <Text style={[
-                  styles.dayAbbr,
-                  isActive    && styles.dayAbbrActive,
-                  isCompleted && styles.dayAbbrCompleted,
-                ]}>
-                  {day.abbr}
-                </Text>
-                {isCompleted ? (
-                  <Text style={styles.checkmark}>✓</Text>
-                ) : (
-                  <Text style={[
-                    styles.dayNum,
-                    isActive && styles.dayNumActive,
-                  ]}>
-                    {day.date}
-                  </Text>
-                )}
+                <Text style={[styles.dayAbbr, isActive && styles.dayAbbrActive]}>{abbr}</Text>
+                <Text style={[styles.dayNum, isActive && styles.dayNumActive]}>{dateNum}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* Separator */}
       <View style={styles.separator} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Session card */}
-        <View style={styles.sessionCard}>
-          {/* Card header */}
-          <View style={styles.cardHeader}>
-            <View style={styles.cardTitleRow}>
-              <Text style={styles.cardTitle}>Acceleration Focus</Text>
-              <View style={styles.durationPill}>
-                <Text style={styles.durationPillText}>45 min</Text>
-              </View>
-            </View>
-            <Text style={styles.cardSub}>Drive phase mechanics · 4 drills</Text>
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator color={COLORS.primary} size="large" />
+            <Text style={styles.loadingText}>Building your plan...</Text>
           </View>
+        ) : error ? (
+          <View style={styles.centered}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : todayDay ? (
+          <View style={styles.sessionCard}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>{todayDay.sessionType}</Text>
+                <View style={styles.durationPill}>
+                  <Text style={styles.durationPillText}>{todayDay.drills.length} drills</Text>
+                </View>
+              </View>
+              <Text style={styles.cardSub}>{todayDay.coachingCues[0] ?? ''}</Text>
+            </View>
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          {/* Drill list */}
-          {DRILLS.map((drill, i) => (
-            <View key={drill.name}>
+            {todayDay.drills.map((drill, i) => (
+              <View key={i}>
+                <TouchableOpacity
+                  onPress={() => handleToggle(i)}
+                  style={[
+                    styles.drillRow,
+                    (i < todayDay.drills.length - 1 || expanded === i) && styles.drillRowBorder,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${drill.name}`}
+                >
+                  <View style={styles.drillNumber}>
+                    <Text style={styles.drillNumberText}>{i + 1}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.drillName}>{drill.name}</Text>
+                    <Text style={styles.drillDetail}>{drillDetail(drill)}</Text>
+                  </View>
+                  <Text style={[styles.chevron, expanded === i && styles.chevronOpen]}>{'⌄'}</Text>
+                </TouchableOpacity>
+
+                {expanded === i && (
+                  <View style={[styles.cueRow, i < todayDay.drills.length - 1 && styles.drillRowBorder]}>
+                    <Text style={styles.cueText}>💡 {drill.cue}</Text>
+                    {drill.restSeconds > 0 && (
+                      <Text style={[styles.cueText, { marginTop: 4 }]}>⏱ {drill.restSeconds}s rest</Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            ))}
+
+            {todayDay.coachingCues.length > 0 && (
+              <View style={styles.coachCueBanner}>
+                <Text style={styles.coachCueIcon}>{'➤'}</Text>
+                <Text style={styles.coachCueText}>
+                  <Text style={styles.coachCueLabel}>Coach's Cue: </Text>
+                  {todayDay.coachingCues[todayDay.coachingCues.length - 1]}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.completeWrap}>
               <TouchableOpacity
-                onPress={() => handleToggle(i)}
-                style={[
-                  styles.drillRow,
-                  (i < DRILLS.length - 1 || expanded === i) && styles.drillRowBorder,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`${drill.name}, ${drill.detail}`}
+                style={[styles.completeBtn, completed && styles.completeBtnDone]}
+                onPress={handleComplete}
+                disabled={completed}
               >
-                <View style={styles.drillNumber}>
-                  <Text style={styles.drillNumberText}>{i + 1}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.drillName}>{drill.name}</Text>
-                  <Text style={styles.drillDetail}>{drill.detail}</Text>
-                </View>
-                <Text style={[
-                  styles.chevron,
-                  expanded === i && styles.chevronOpen,
-                ]}>
-                  {'⌄'}
+                <Text style={styles.completeBtnIcon}>{'✓'}</Text>
+                <Text style={styles.completeBtnText}>
+                  {completed ? 'Session Complete!' : 'Complete Session'}
                 </Text>
               </TouchableOpacity>
-
-              {expanded === i && (
-                <View style={[
-                  styles.cueRow,
-                  i < DRILLS.length - 1 && styles.drillRowBorder,
-                ]}>
-                  <Text style={styles.cueText}>💡 {drill.cue}</Text>
-                </View>
-              )}
             </View>
-          ))}
-
-          {/* Coaching cue banner */}
-          <View style={styles.coachCueBanner}>
-            <Text style={styles.coachCueIcon}>{'➤'}</Text>
-            <Text style={styles.coachCueText}>
-              <Text style={styles.coachCueLabel}>Coach's Cue: </Text>
-              Keep your hips tall throughout the acceleration phase. Don't rush the transition to upright running.
-            </Text>
           </View>
-
-          {/* Complete session button */}
-          <View style={styles.completeWrap}>
-            <TouchableOpacity
-              style={[styles.completeBtn, completed && styles.completeBtnDone]}
-              onPress={handleComplete}
-              disabled={completed}
-            >
-              <Text style={styles.completeBtnIcon}>{'✓'}</Text>
-              <Text style={styles.completeBtnText}>
-                {completed ? 'Session Complete!' : 'Complete Session'}
-              </Text>
-            </TouchableOpacity>
+        ) : (
+          <View style={styles.centered}>
+            <Text style={styles.loadingText}>Rest day — no session today.</Text>
           </View>
-        </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -243,15 +256,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  dayPillCompleted: { borderColor: COLORS.green, borderWidth: 1.5 },
   dayAbbr: { fontSize: 11, fontWeight: '600', color: COLORS.grey, letterSpacing: 0.4 },
   dayAbbrActive: { color: '#FFFFFF' },
-  dayAbbrCompleted: { color: COLORS.green },
-  checkmark: { fontSize: 16, color: COLORS.green, fontWeight: '700' },
   dayNum: { fontSize: 16, fontWeight: '700', color: COLORS.grey, lineHeight: 20 },
   dayNumActive: { color: '#FFFFFF' },
 
   separator: { height: 1, backgroundColor: COLORS.border },
+
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12 },
+  loadingText: { fontSize: 14, color: COLORS.grey, textAlign: 'center' },
+  errorText: { fontSize: 14, color: '#C0392B', textAlign: 'center' },
 
   sessionCard: {
     backgroundColor: COLORS.surface,

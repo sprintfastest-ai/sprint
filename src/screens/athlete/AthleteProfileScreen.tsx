@@ -30,7 +30,6 @@ const EVENTS = ['100m', '200m', '60m', '400m', '4×100m relay'];
 
 export default function AthleteProfileScreen() {
   const user = useAuthStore((s) => s.user);
-  const isLoading = useAuthStore((s) => s.isLoading);
   const logout = useAuthStore((s) => s.logout);
   const [loggingOut, setLoggingOut] = useState(false);
 
