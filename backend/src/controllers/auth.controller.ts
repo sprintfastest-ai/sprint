@@ -3,6 +3,7 @@ import { sendSuccess } from '@/utils/response';
 import { AppError } from '@/middleware/errorHandler';
 import { ERROR_CODES } from '@/utils/constants';
 import { findUserById } from '@/db/queries/users';
+import pool from '@/db/pool';
 import {
   register,
   login,
@@ -163,7 +164,17 @@ export async function meHandler(
     // Strip sensitive fields
     const { password_hash: _ph, verification_token: _vt, reset_token: _rt, ...safeUser } = user;
 
-    sendSuccess(res, safeUser);
+    // Attach athleteId for athlete users so the mobile app can use it directly
+    let athleteId: string | undefined;
+    if (safeUser.role === 'athlete') {
+      const { rows } = await pool.query<{ id: string }>(
+        'SELECT id FROM athlete_profiles WHERE user_id = $1 LIMIT 1',
+        [userId],
+      );
+      athleteId = rows[0]?.id;
+    }
+
+    sendSuccess(res, { ...safeUser, athleteId });
   } catch (err) {
     next(err);
   }

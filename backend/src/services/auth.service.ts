@@ -144,6 +144,7 @@ export async function register(
       role,
       isVerified: false,
       createdAt: createdUser!.created_at,
+      athleteId: athleteProfileId,
     },
   };
 }
@@ -227,6 +228,7 @@ export async function login(
       role: user.role,
       isVerified: user.is_verified,
       createdAt: user.created_at,
+      athleteId,
     },
   };
 }

@@ -15,7 +15,8 @@ interface PersonalBest {
   time_seconds: number;
 }
 
-async function buildAthleteContext(athleteId: string): Promise<string> {
+async function buildAthleteContext(athleteId: string | undefined): Promise<string> {
+  if (!athleteId) return '';
   const [profileRes, pbRes] = await Promise.all([
     pool.query<AthleteProfile>(
       'SELECT age_group, primary_event, weakness_type FROM athlete_profiles WHERE id = $1 LIMIT 1',

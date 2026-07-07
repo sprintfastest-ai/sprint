@@ -36,13 +36,17 @@ export default function AthleteProfileScreen() {
   const logout = useAuthStore((s) => s.logout);
   const [loggingOut, setLoggingOut] = useState(false);
   const [profile, setProfile] = useState<AthleteProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { sessions, personalBests, loadSessionHistory, loadPersonalBests } = useTraining();
 
   useEffect(() => {
     loadSessionHistory();
     loadPersonalBests();
-    profileApi.getMyProfile().then(setProfile).catch(() => null);
+    profileApi.getMyProfile()
+      .then(setProfile)
+      .catch(() => null)
+      .finally(() => setProfileLoading(false));
   }, [loadSessionHistory, loadPersonalBests]);
 
   const selectedAgeGroup = profile?.ageGroup ?? null;
@@ -170,41 +174,49 @@ export default function AthleteProfileScreen() {
         {/* Age group */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>AGE GROUP</Text>
-          <View style={styles.pillRow}>
-            {AGE_GROUPS.map((g) => {
-              const active = selectedAgeGroup === g;
-              return (
-                <TouchableOpacity
-                  key={g}
-                  style={[styles.pill, active && styles.pillActive]}
-                  onPress={() => toggleAgeGroup(g)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{g}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {profileLoading ? (
+            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 4 }} />
+          ) : (
+            <View style={styles.pillRow}>
+              {AGE_GROUPS.map((g) => {
+                const active = selectedAgeGroup === g;
+                return (
+                  <TouchableOpacity
+                    key={g}
+                    style={[styles.pill, active && styles.pillActive]}
+                    onPress={() => toggleAgeGroup(g)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pillText, active && styles.pillTextActive]}>{g}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* Events */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>EVENTS</Text>
-          <View style={styles.pillRow}>
-            {EVENTS.map((e) => {
-              const active = selectedEvents.includes(e);
-              return (
-                <TouchableOpacity
-                  key={e}
-                  style={[styles.pill, active && styles.pillActive]}
-                  onPress={() => toggleEvent(e)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{e}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {profileLoading ? (
+            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 4 }} />
+          ) : (
+            <View style={styles.pillRow}>
+              {EVENTS.map((e) => {
+                const active = selectedEvents.includes(e);
+                return (
+                  <TouchableOpacity
+                    key={e}
+                    style={[styles.pill, active && styles.pillActive]}
+                    onPress={() => toggleEvent(e)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pillText, active && styles.pillTextActive]}>{e}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* Stats row */}
