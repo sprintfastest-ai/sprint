@@ -4,6 +4,47 @@ import pool from '@/db/pool';
 import logger from '@/utils/logger';
 import type { AuthenticatedSocket, HandlerMap, OutboundMessage } from '../types';
 
+interface AthleteProfile {
+  age_group: string | null;
+  primary_event: string | null;
+  weakness_type: string | null;
+}
+
+interface PersonalBest {
+  distance_metres: number;
+  time_seconds: number;
+}
+
+async function buildAthleteContext(athleteId: string): Promise<string> {
+  const [profileRes, pbRes] = await Promise.all([
+    pool.query<AthleteProfile>(
+      'SELECT age_group, primary_event, weakness_type FROM athlete_profiles WHERE id = $1 LIMIT 1',
+      [athleteId],
+    ),
+    pool.query<PersonalBest>(
+      'SELECT distance_metres, time_seconds FROM personal_bests WHERE athlete_id = $1 AND is_current_pb = TRUE ORDER BY distance_metres ASC',
+      [athleteId],
+    ),
+  ]);
+
+  const profile = profileRes.rows[0];
+  if (!profile) return '';
+
+  const parts: string[] = [];
+  if (profile.age_group) parts.push(`Age group: ${profile.age_group}`);
+  if (profile.primary_event) parts.push(`Primary event: ${profile.primary_event}`);
+  if (profile.weakness_type) parts.push(`Current weakness: ${profile.weakness_type.replace(/_/g, ' ')}`);
+
+  if (pbRes.rows.length) {
+    const pbStr = pbRes.rows
+      .map((pb) => `${pb.distance_metres}m in ${pb.time_seconds}s`)
+      .join(', ');
+    parts.push(`Personal bests: ${pbStr}`);
+  }
+
+  return parts.length ? `\n\nAthlete profile: ${parts.join(', ')}.` : '';
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function send(socket: AuthenticatedSocket, msg: OutboundMessage): void {
@@ -125,13 +166,14 @@ async function handleChatSend(
 
   try {
     const history = await fetchHistory(socket.athleteId, sessionId);
+    const athleteContext = await buildAthleteContext(socket.athleteId);
 
     const model = getStreamingModel();
     const chat = model.startChat({
       history: [
         {
           role: 'user',
-          parts: [{ text: SYSTEM_PROMPT }],
+          parts: [{ text: SYSTEM_PROMPT + athleteContext }],
         },
         {
           role: 'model',

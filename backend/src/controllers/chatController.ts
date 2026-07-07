@@ -13,6 +13,47 @@ async function resolveAthleteId(userId: string): Promise<string | null> {
   return (rows[0] as { id: string } | undefined)?.id ?? null;
 }
 
+interface AthleteProfile {
+  age_group: string | null;
+  primary_event: string | null;
+  weakness_type: string | null;
+}
+
+interface PersonalBest {
+  distance_metres: number;
+  time_seconds: number;
+}
+
+async function buildAthleteContext(athleteId: string): Promise<string> {
+  const [profileRes, pbRes] = await Promise.all([
+    pool.query<AthleteProfile>(
+      'SELECT age_group, primary_event, weakness_type FROM athlete_profiles WHERE id = $1 LIMIT 1',
+      [athleteId],
+    ),
+    pool.query<PersonalBest>(
+      'SELECT distance_metres, time_seconds FROM personal_bests WHERE athlete_id = $1 AND is_current_pb = TRUE ORDER BY distance_metres ASC',
+      [athleteId],
+    ),
+  ]);
+
+  const profile = profileRes.rows[0];
+  if (!profile) return '';
+
+  const parts: string[] = [];
+  if (profile.age_group) parts.push(`Age group: ${profile.age_group}`);
+  if (profile.primary_event) parts.push(`Primary event: ${profile.primary_event}`);
+  if (profile.weakness_type) parts.push(`Current weakness: ${profile.weakness_type.replace(/_/g, ' ')}`);
+
+  if (pbRes.rows.length) {
+    const pbStr = pbRes.rows
+      .map((pb) => `${pb.distance_metres}m in ${pb.time_seconds}s`)
+      .join(', ');
+    parts.push(`Personal bests: ${pbStr}`);
+  }
+
+  return parts.length ? `\n\nAthlete profile: ${parts.join(', ')}.` : '';
+}
+
 export async function sendMessage(
   req: Request,
   res: Response,
@@ -46,7 +87,8 @@ export async function sendMessage(
       [athleteId, content],
     );
 
-    const reply = await chatWithCoach(userId, content, geminiHistory);
+    const athleteContext = await buildAthleteContext(athleteId);
+    const reply = await chatWithCoach(userId, content, geminiHistory, athleteContext);
 
     const { rows } = await pool.query(
       `INSERT INTO chat_messages (athlete_id, role, content) VALUES ($1, 'assistant', $2)

@@ -132,14 +132,16 @@ export async function chatWithCoach(
   _userId: string,
   message: string,
   history: Array<{ role: 'user' | 'model'; parts: [{ text: string }] }>,
+  athleteContext = '',
 ): Promise<string> {
   try {
     const model = getModel();
+    const systemText = `You are an expert sprint coach assistant for SprintFastest. Be concise, encouraging, and evidence-based. Only answer questions about sprint training, recovery, nutrition for sprinters, and race preparation.${athleteContext}`;
     const chat = model.startChat({
       history: [
         {
           role: 'user',
-          parts: [{ text: 'You are an expert sprint coach assistant for SprintFastest. Be concise, encouraging, and evidence-based. Only answer questions about sprint training, recovery, nutrition for sprinters, and race preparation.' }],
+          parts: [{ text: systemText }],
         },
         {
           role: 'model',
