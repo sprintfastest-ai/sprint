@@ -15,7 +15,7 @@ function send(socket: AuthenticatedSocket, msg: OutboundMessage): void {
 function getStreamingModel() {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
   return genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL ?? 'gemini-1.5-flash',
+    model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite-preview-06-17',
   });
 }
 

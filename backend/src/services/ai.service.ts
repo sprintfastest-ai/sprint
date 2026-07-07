@@ -17,7 +17,7 @@ export interface DiagnosisAnswer {
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-const MODEL_NAME = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+const MODEL_NAME = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite-preview-06-17';
 
 let _genAI: GoogleGenerativeAI | null = null;
 

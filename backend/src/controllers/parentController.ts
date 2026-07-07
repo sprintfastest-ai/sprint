@@ -52,7 +52,8 @@ export async function getAthleteProgress(
         [athleteId],
       ),
       pool.query(
-        'SELECT * FROM personal_bests WHERE athlete_id = $1 ORDER BY distance ASC',
+        `SELECT athlete_id AS "athleteId", distance_metres AS distance, time_seconds AS "timeSeconds", recorded_at AS "recordedAt"
+         FROM personal_bests WHERE athlete_id = $1 AND is_current_pb = TRUE ORDER BY distance_metres ASC`,
         [athleteId],
       ),
       pool.query(

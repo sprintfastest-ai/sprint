@@ -33,6 +33,10 @@ async function bootstrap(): Promise<void> {
   // ── Express app ───────────────────────────────────────────────────────────
   const app = express();
 
+  // Render (and most cloud hosts) sit behind a reverse proxy — trust it so
+  // express-rate-limit and other middleware can see the real client IP.
+  app.set('trust proxy', 1);
+
   // Security headers — CSP stripped down for a JSON API
   app.use(
     helmet({
