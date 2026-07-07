@@ -205,9 +205,10 @@ export async function logPersonalBest(
 // ─── Guard ────────────────────────────────────────────────────────────────────
 
 function assertCanAccessAthlete(req: Request, athleteId: string): void {
-  const { role, userId: sub } = req.user ?? {};
+  const { role, userId: sub, athleteId: tokenAthleteId } = req.user ?? {};
   if (role === 'admin') return;
-  if (role === 'athlete' && sub === athleteId) return;
-  if (role === 'coach' || role === 'parent') return; // further scoping done at DB layer
+  // athlete_profiles.id is stored as athleteId in the JWT; userId is the users table id
+  if (role === 'athlete' && (tokenAthleteId === athleteId || sub === athleteId)) return;
+  if (role === 'coach' || role === 'parent') return;
   throw new AppError('Forbidden', ERROR_CODES.FORBIDDEN, 403);
 }
