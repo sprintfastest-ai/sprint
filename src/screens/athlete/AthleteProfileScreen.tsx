@@ -7,10 +7,13 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
+import { profileApi } from '@/api/training';
+import type { AthleteProfile } from '@/api/training';
 
 const COLORS = {
   primary: '#1A6BB5',
@@ -23,7 +26,6 @@ const COLORS = {
   surface: '#FFFFFF',
   bg: '#F8F9FA',
   blueLight: '#EBF5FB',
-  orangeLight: '#FEF3EC',
 };
 
 const AGE_GROUPS = ['U11', 'U13', 'U15', 'U17', 'U20'];
@@ -33,17 +35,55 @@ export default function AthleteProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [profile, setProfile] = useState<AthleteProfile | null>(null);
+  const [saving, setSaving] = useState(false);
   const { sessions, personalBests, loadSessionHistory, loadPersonalBests } = useTraining();
 
   useEffect(() => {
     loadSessionHistory();
     loadPersonalBests();
+    profileApi.getMyProfile().then(setProfile).catch(() => null);
   }, [loadSessionHistory, loadPersonalBests]);
 
-  const initials = user?.email
-    ? user.email.slice(0, 2).toUpperCase()
-    : '??';
+  const selectedAgeGroup = profile?.ageGroup ?? null;
+  const selectedEvents = profile?.primaryEvent
+    ? profile.primaryEvent.split(',').map((e) => e.trim())
+    : [];
 
+  const toggleAgeGroup = useCallback(async (group: string) => {
+    if (!profile) return;
+    setSaving(true);
+    try {
+      const updated = await profileApi.updateMyProfile({ ageGroup: group });
+      setProfile((p) => p ? { ...p, ageGroup: updated.ageGroup } : p);
+    } catch {
+      Alert.alert('Error', 'Could not save age group. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }, [profile]);
+
+  const toggleEvent = useCallback(async (event: string) => {
+    if (!profile) return;
+    const current = profile.primaryEvent
+      ? profile.primaryEvent.split(',').map((e) => e.trim())
+      : [];
+    const next = current.includes(event)
+      ? current.filter((e) => e !== event)
+      : [...current, event];
+    const primaryEvent = next.join(', ');
+    setSaving(true);
+    try {
+      const updated = await profileApi.updateMyProfile({ primaryEvent });
+      setProfile((p) => p ? { ...p, primaryEvent: updated.primaryEvent } : p);
+    } catch {
+      Alert.alert('Error', 'Could not save events. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }, [profile]);
+
+  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : '??';
   const firstName = user?.email?.split('@')[0] ?? 'Athlete';
 
   const sessionCount = sessions.length;
@@ -73,6 +113,36 @@ export default function AthleteProfileScreen() {
     ]);
   }, [logout]);
 
+  const handleChangePassword = useCallback(() => {
+    Alert.alert(
+      'Change Password',
+      'A password reset link will be sent to your email address.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send Link',
+          onPress: () => Alert.alert('Email Sent', 'Check your inbox for the password reset link.'),
+        },
+      ],
+    );
+  }, []);
+
+  const handlePrivacyPolicy = useCallback(() => {
+    Linking.openURL('https://sprintfastest.com/privacy').catch(() =>
+      Alert.alert('Error', 'Could not open the privacy policy.'),
+    );
+  }, []);
+
+  const handleHelpSupport = useCallback(() => {
+    Linking.openURL('mailto:support@sprintfastest.com').catch(() =>
+      Alert.alert('Help & Support', 'Email us at support@sprintfastest.com'),
+    );
+  }, []);
+
+  const handleNotifications = useCallback(() => {
+    Alert.alert('Notifications', 'Notification settings coming soon.');
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -80,6 +150,7 @@ export default function AthleteProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
+          {saving && <ActivityIndicator size="small" color={COLORS.primary} />}
         </View>
 
         {/* Avatar card */}
@@ -100,11 +171,19 @@ export default function AthleteProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>AGE GROUP</Text>
           <View style={styles.pillRow}>
-            {AGE_GROUPS.map((g) => (
-              <View key={g} style={[styles.pill, g === 'U15' && styles.pillActive]}>
-                <Text style={[styles.pillText, g === 'U15' && styles.pillTextActive]}>{g}</Text>
-              </View>
-            ))}
+            {AGE_GROUPS.map((g) => {
+              const active = selectedAgeGroup === g;
+              return (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.pill, active && styles.pillActive]}
+                  onPress={() => toggleAgeGroup(g)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{g}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -112,11 +191,19 @@ export default function AthleteProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>EVENTS</Text>
           <View style={styles.pillRow}>
-            {EVENTS.map((e) => (
-              <View key={e} style={[styles.pill, (e === '100m' || e === '200m') && styles.pillActive]}>
-                <Text style={[styles.pillText, (e === '100m' || e === '200m') && styles.pillTextActive]}>{e}</Text>
-              </View>
-            ))}
+            {EVENTS.map((e) => {
+              const active = selectedEvents.includes(e);
+              return (
+                <TouchableOpacity
+                  key={e}
+                  style={[styles.pill, active && styles.pillActive]}
+                  onPress={() => toggleEvent(e)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{e}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -138,13 +225,13 @@ export default function AthleteProfileScreen() {
 
         {/* Settings */}
         <View style={styles.settingsCard}>
-          <SettingsRow icon="🔔" label="Notifications" onPress={() => {}} />
+          <SettingsRow icon="🔔" label="Notifications" onPress={handleNotifications} />
           <View style={styles.rowDivider} />
-          <SettingsRow icon="🔒" label="Change Password" onPress={() => {}} />
+          <SettingsRow icon="🔒" label="Change Password" onPress={handleChangePassword} />
           <View style={styles.rowDivider} />
-          <SettingsRow icon="📋" label="Privacy Policy" onPress={() => {}} />
+          <SettingsRow icon="📋" label="Privacy Policy" onPress={handlePrivacyPolicy} />
           <View style={styles.rowDivider} />
-          <SettingsRow icon="❓" label="Help & Support" onPress={() => {}} />
+          <SettingsRow icon="❓" label="Help & Support" onPress={handleHelpSupport} />
         </View>
 
         {/* Sign out */}
@@ -169,7 +256,7 @@ export default function AthleteProfileScreen() {
 
 function SettingsRow({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
   return (
-    <TouchableOpacity style={styles.settingsRow} onPress={onPress}>
+    <TouchableOpacity style={styles.settingsRow} onPress={onPress} activeOpacity={0.7}>
       <Text style={styles.settingsIcon}>{icon}</Text>
       <Text style={styles.settingsLabel}>{label}</Text>
       <Text style={styles.settingsChevron}>›</Text>
@@ -189,6 +276,9 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerTitle: { fontSize: 20, fontWeight: '700', color: COLORS.text, letterSpacing: -0.3 },
 

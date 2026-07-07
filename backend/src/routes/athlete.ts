@@ -10,11 +10,23 @@ import {
   logPersonalBest,
   diagnose,
   getDiagnosisHistory,
+  getMyProfile,
+  updateMyProfile,
 } from '@/controllers/athleteController';
 
 const router = Router();
 
 router.use(authenticate);
+
+router.get('/me', getMyProfile);
+router.patch(
+  '/me',
+  body('ageGroup').optional().isIn(['U11', 'U13', 'U15', 'U17', 'U20']).withMessage('Invalid age group'),
+  body('primaryEvent').optional().isString().trim().isLength({ max: 50 }),
+  body('trainingDaysPerWeek').optional().isInt({ min: 1, max: 7 }),
+  validate,
+  updateMyProfile,
+);
 
 const athleteIdParam = param('athleteId').isUUID().withMessage('Invalid athleteId');
 

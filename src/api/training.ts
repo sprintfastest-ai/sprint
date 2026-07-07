@@ -3,6 +3,27 @@ import type { TrainingPlan, Session, PersonalBest } from '@/types';
 
 type ApiResponse<T> = { data: T };
 
+export interface AthleteProfile {
+  athleteId: string;
+  ageGroup: string | null;
+  primaryEvent: string | null;
+  weaknessType: string | null;
+  trainingDaysPerWeek: number | null;
+  email?: string;
+  role?: string;
+}
+
+export const profileApi = {
+  getMyProfile: async (): Promise<AthleteProfile> => {
+    const { data } = await client.get<ApiResponse<AthleteProfile>>('/athletes/me');
+    return data.data;
+  },
+  updateMyProfile: async (updates: Partial<Pick<AthleteProfile, 'ageGroup' | 'primaryEvent' | 'trainingDaysPerWeek'>>): Promise<AthleteProfile> => {
+    const { data } = await client.patch<ApiResponse<AthleteProfile>>('/athletes/me', updates);
+    return data.data;
+  },
+};
+
 export const trainingApi = {
   getWeeklyPlan: async (
     athleteId: string,

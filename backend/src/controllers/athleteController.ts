@@ -31,7 +31,7 @@ export async function getWeeklyPlan(
     if (!plan) {
       // Generate on-demand if no plan exists yet
       const { rows } = await pool.query(
-        'SELECT * FROM athlete_profiles WHERE user_id = $1',
+        'SELECT * FROM athlete_profiles WHERE id = $1',
         [athleteId],
       );
       const profile = rows[0] as {
@@ -197,6 +197,70 @@ export async function logPersonalBest(
     await upsertPersonalBest(pb);
     const pbs = await getPersonalBestsByAthlete(athleteId);
     sendSuccess(res, pbs, 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getMyProfile(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+
+    const { rows } = await pool.query(
+      `SELECT ap.id AS "athleteId", ap.age_group AS "ageGroup", ap.primary_event AS "primaryEvent",
+              ap.weakness_type AS "weaknessType", ap.training_days_per_week AS "trainingDaysPerWeek",
+              u.email, u.role
+       FROM athlete_profiles ap
+       JOIN users u ON u.id = ap.user_id
+       WHERE ap.user_id = $1 LIMIT 1`,
+      [userId],
+    );
+    if (!rows.length) throw new AppError('Profile not found', ERROR_CODES.NOT_FOUND, 404);
+    sendSuccess(res, rows[0]);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateMyProfile(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+
+    const { ageGroup, primaryEvent, trainingDaysPerWeek } = req.body as {
+      ageGroup?: string;
+      primaryEvent?: string;
+      trainingDaysPerWeek?: number;
+    };
+
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    let idx = 1;
+    if (ageGroup !== undefined) { updates.push(`age_group = $${idx++}`); values.push(ageGroup); }
+    if (primaryEvent !== undefined) { updates.push(`primary_event = $${idx++}`); values.push(primaryEvent); }
+    if (trainingDaysPerWeek !== undefined) { updates.push(`training_days_per_week = $${idx++}`); values.push(trainingDaysPerWeek); }
+
+    if (!updates.length) throw new AppError('Nothing to update', ERROR_CODES.VALIDATION_ERROR, 400);
+
+    values.push(userId);
+    const { rows } = await pool.query(
+      `UPDATE athlete_profiles SET ${updates.join(', ')}
+       WHERE user_id = $${idx}
+       RETURNING id AS "athleteId", age_group AS "ageGroup", primary_event AS "primaryEvent",
+                 weakness_type AS "weaknessType", training_days_per_week AS "trainingDaysPerWeek"`,
+      values,
+    );
+    if (!rows.length) throw new AppError('Profile not found', ERROR_CODES.NOT_FOUND, 404);
+    sendSuccess(res, rows[0]);
   } catch (err) {
     next(err);
   }
