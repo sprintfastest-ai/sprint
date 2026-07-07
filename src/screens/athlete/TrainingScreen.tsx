@@ -51,21 +51,24 @@ export default function TrainingScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadPlan = useCallback(() => {
     const athleteId = user?.athleteId ?? user?.id;
     if (!athleteId) return;
+    setLoading(true);
+    setError(null);
     const weekStart = getWeekStartDate();
     trainingApi.getWeeklyPlan(athleteId, weekStart)
       .then((p) => {
         setPlan(p);
-        // Auto-select today's day (0=Mon in plan)
-        const todayJS = new Date().getDay(); // 0=Sun
+        const todayJS = new Date().getDay();
         const todayPlan = todayJS === 0 ? 6 : todayJS - 1;
         setSelectedDayIdx(Math.min(todayPlan, p.days.length - 1));
       })
       .catch(() => setError('Could not load training plan'))
       .finally(() => setLoading(false));
   }, [user]);
+
+  useEffect(() => { loadPlan(); }, [loadPlan]);
 
   const handleToggle = useCallback((idx: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -141,6 +144,9 @@ export default function TrainingScreen() {
         ) : error ? (
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={loadPlan}>
+              <Text style={styles.retryBtnText}>Try Again</Text>
+            </TouchableOpacity>
           </View>
         ) : todayDay ? (
           <View style={styles.sessionCard}>
@@ -265,7 +271,17 @@ const styles = StyleSheet.create({
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12 },
   loadingText: { fontSize: 14, color: COLORS.grey, textAlign: 'center' },
-  errorText: { fontSize: 14, color: '#C0392B', textAlign: 'center' },
+  errorText: { fontSize: 14, color: '#C0392B', textAlign: 'center', marginBottom: 16 },
+  retryBtn: {
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#1A6BB5',
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryBtnText: { fontSize: 14, fontWeight: '600', color: '#1A6BB5' },
 
   sessionCard: {
     backgroundColor: COLORS.surface,

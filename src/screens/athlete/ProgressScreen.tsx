@@ -25,8 +25,8 @@ const COLORS = {
   blueLight: '#EBF5FB',
 };
 
-const DISTANCES = ['20m', '30m', '60m', '100m', '200m'];
-const DISTANCE_VALUES = [20, 30, 60, 100, 200];
+const DISTANCES = ['20m', '30m', '60m', '100m', '200m', '400m'];
+const DISTANCE_VALUES = [20, 30, 60, 100, 200, 400];
 const SUB_TABS = ['PBs', 'Log Time', 'History'];
 
 export default function ProgressScreen() {
@@ -106,7 +106,19 @@ export default function ProgressScreen() {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {subTab === 0 && <PBsTab pbs={pbs} pb100={pb100} isLoading={isLoading} />}
+        {subTab === 0 && (
+          <PBsTab
+            pbs={pbs}
+            pb100={pb100}
+            isLoading={isLoading}
+            onLogDistance={(distanceIdx) => {
+              setDistIdx(distanceIdx);
+              setLogResult(null);
+              setLoggedTime(null);
+              setSubTab(1);
+            }}
+          />
+        )}
         {subTab === 1 && (
           <LogTimeTab
             distIdx={distIdx}
@@ -138,10 +150,12 @@ function PBsTab({
   pbs,
   pb100,
   isLoading,
+  onLogDistance,
 }: {
   pbs: PersonalBest[];
   pb100?: PersonalBest;
   isLoading: boolean;
+  onLogDistance: (distanceIdx: number) => void;
 }) {
   if (isLoading) {
     return <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />;
@@ -152,12 +166,12 @@ function PBsTab({
   return (
     <>
       <View style={styles.pbGrid}>
-        <PBCard dist="20m" pb={getPb(20)} />
-        <PBCard dist="30m" pb={getPb(30)} />
-        <PBCard dist="60m" pb={getPb(60)} />
+        <PBCard dist="20m" pb={getPb(20)} onPress={() => onLogDistance(0)} />
+        <PBCard dist="30m" pb={getPb(30)} onPress={() => onLogDistance(1)} />
+        <PBCard dist="60m" pb={getPb(60)} onPress={() => onLogDistance(2)} />
 
         {/* 100m hero */}
-        <View style={styles.pbHero}>
+        <TouchableOpacity style={styles.pbHero} onPress={() => onLogDistance(3)} activeOpacity={0.8}>
           <View style={styles.pbHeroHeader}>
             <Text style={styles.pbDistLabel}>100m</Text>
             <Text style={{ fontSize: 18 }}>{'🏆'}</Text>
@@ -173,30 +187,32 @@ function PBsTab({
               : 'No time logged yet'}
           </Text>
           {pb100 && <Sparkline data={[pb100.timeSeconds]} />}
-        </View>
+        </TouchableOpacity>
 
-        <PBCard dist="200m" pb={getPb(200)} />
+        <PBCard dist="200m" pb={getPb(200)} onPress={() => onLogDistance(4)} />
         <View />
       </View>
 
-      {/* 400m empty state */}
-      <View style={styles.emptyCard}>
+      {/* 400m — tappable to log */}
+      <TouchableOpacity style={styles.emptyCard} onPress={() => onLogDistance(5)} activeOpacity={0.8}>
         <View>
           <Text style={styles.pbDistLabel}>400m</Text>
-          <Text style={styles.emptyTime}>{'--'}</Text>
-          <Text style={styles.emptyPrompt}>Tap to log your first time</Text>
+          <Text style={styles.emptyTime}>{getPb(400) ? `${getPb(400)!.timeSeconds}s` : '--'}</Text>
+          <Text style={styles.emptyPrompt}>
+            {getPb(400) ? `Set ${new Date(getPb(400)!.recordedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'Tap to log your first time'}
+          </Text>
         </View>
         <View style={styles.addBtn}>
           <Text style={styles.addBtnIcon}>{'+'}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     </>
   );
 }
 
-function PBCard({ dist, pb }: { dist: string; pb?: PersonalBest }) {
+function PBCard({ dist, pb, onPress }: { dist: string; pb?: PersonalBest; onPress: () => void }) {
   return (
-    <View style={styles.pbCard}>
+    <TouchableOpacity style={styles.pbCard} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.pbCardHeader}>
         <Text style={styles.pbDistLabel}>{dist}</Text>
         <Text style={{ fontSize: 12, color: COLORS.grey }}>{'⏱'}</Text>
@@ -207,7 +223,7 @@ function PBCard({ dist, pb }: { dist: string; pb?: PersonalBest }) {
           ? `Set ${new Date(pb.recordedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
           : 'No time yet'}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
