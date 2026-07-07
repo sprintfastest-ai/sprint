@@ -15,16 +15,18 @@ export function useTraining() {
     fetchSessionHistory,
   } = useAthleteStore();
 
+  const athleteId = user?.athleteId ?? user?.id ?? '';
+
   const loadWeeklyPlan = useCallback(
     (weekStartDate: string) => {
-      if (user?.id) fetchWeeklyPlan(user.id, weekStartDate);
+      if (athleteId) fetchWeeklyPlan(athleteId, weekStartDate);
     },
-    [user?.id, fetchWeeklyPlan],
+    [athleteId, fetchWeeklyPlan],
   );
 
   const loadPersonalBests = useCallback(() => {
-    if (user?.id) fetchPersonalBests(user.id);
-  }, [user?.id, fetchPersonalBests]);
+    if (athleteId) fetchPersonalBests(athleteId);
+  }, [athleteId, fetchPersonalBests]);
 
   return {
     currentPlan,

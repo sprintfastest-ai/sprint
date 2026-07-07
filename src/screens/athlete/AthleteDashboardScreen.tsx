@@ -32,11 +32,12 @@ type NavProp = BottomTabNavigationProp<AthleteTabParamList>;
 export default function AthleteDashboardScreen() {
   const navigation = useNavigation<NavProp>();
   const user = useAuthStore((s) => s.user);
-  const { currentPlan, loadWeeklyPlan, isLoading } = useTraining();
+  const { currentPlan, personalBests, loadWeeklyPlan, loadPersonalBests, isLoading } = useTraining();
 
   useEffect(() => {
     loadWeeklyPlan(getWeekStartDate());
-  }, [loadWeeklyPlan]);
+    loadPersonalBests();
+  }, [loadWeeklyPlan, loadPersonalBests]);
 
   const firstName = user?.email?.split('@')[0] ?? 'Athlete';
   const today = new Date();
@@ -48,6 +49,9 @@ export default function AthleteDashboardScreen() {
   });
 
   const todayDay = currentPlan?.days[today.getDay() === 0 ? 6 : today.getDay() - 1];
+
+  const pb100m = personalBests.find((pb) => pb.distance === 100);
+  const pb100mStr = pb100m ? `${pb100m.timeSeconds.toFixed(2)}s` : '–';
   const drillNames = todayDay?.drills.slice(0, 4).map((d) => d.name) ?? [];
 
   const handleStartSession = useCallback(() => {
@@ -148,7 +152,7 @@ export default function AthleteDashboardScreen() {
           {/* 100m PB */}
           <View style={[styles.statCard, { justifyContent: 'center' }]}>
             <Text style={styles.sectionLabel}>100M PB</Text>
-            <Text style={styles.pbTime}>13.2s</Text>
+            <Text style={styles.pbTime}>{pb100mStr}</Text>
             <View style={styles.pbBadge}>
               <CheckCircleIcon />
               <Text style={styles.pbBadgeText}>Personal Best</Text>

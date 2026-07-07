@@ -1,16 +1,18 @@
 import client from './client';
 import type { TrainingPlan, Session, PersonalBest } from '@/types';
 
+type ApiResponse<T> = { data: T };
+
 export const trainingApi = {
   getWeeklyPlan: async (
     athleteId: string,
     weekStartDate: string,
   ): Promise<TrainingPlan> => {
-    const { data } = await client.get<TrainingPlan>(
+    const { data } = await client.get<ApiResponse<TrainingPlan>>(
       `/athletes/${athleteId}/plans`,
       { params: { weekStartDate } },
     );
-    return data;
+    return data.data;
   },
 
   completeSession: async (
@@ -18,24 +20,32 @@ export const trainingApi = {
     planId: string,
     timesRecorded: PersonalBest[],
   ): Promise<Session> => {
-    const { data } = await client.post<Session>(
+    const { data } = await client.post<ApiResponse<Session>>(
       `/athletes/${athleteId}/sessions`,
       { planId, timesRecorded },
     );
-    return data;
+    return data.data;
   },
 
   getSessionHistory: async (athleteId: string): Promise<Session[]> => {
-    const { data } = await client.get<Session[]>(
+    const { data } = await client.get<ApiResponse<Session[]>>(
       `/athletes/${athleteId}/sessions`,
     );
-    return data;
+    return data.data;
   },
 
   getPersonalBests: async (athleteId: string): Promise<PersonalBest[]> => {
-    const { data } = await client.get<PersonalBest[]>(
+    const { data } = await client.get<ApiResponse<PersonalBest[]>>(
       `/athletes/${athleteId}/pbs`,
     );
-    return data;
+    return data.data;
+  },
+
+  logPersonalBest: async (pb: PersonalBest): Promise<PersonalBest> => {
+    const { data } = await client.post<ApiResponse<PersonalBest>>(
+      `/athletes/${pb.athleteId}/pbs`,
+      pb,
+    );
+    return data.data;
   },
 };

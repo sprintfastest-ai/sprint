@@ -7,7 +7,7 @@ export const STORAGE_KEYS = {
 } as const;
 
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? 'https://api.sprintfastest.com/v1';
+  process.env.EXPO_PUBLIC_API_URL ?? 'https://sprintfastest-api.onrender.com/api/v1';
 
 const APP_VERSION = '1.0.0';
 
