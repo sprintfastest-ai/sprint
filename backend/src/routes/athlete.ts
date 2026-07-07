@@ -7,6 +7,7 @@ import {
   completeSession,
   getSessionHistory,
   getPersonalBests,
+  logPersonalBest,
   diagnose,
   getDiagnosisHistory,
 } from '@/controllers/athleteController';
@@ -37,6 +38,15 @@ router.post(
 router.get('/:athleteId/sessions', athleteIdParam, validate, getSessionHistory);
 
 router.get('/:athleteId/pbs', athleteIdParam, validate, getPersonalBests);
+
+router.post(
+  '/:athleteId/pbs',
+  athleteIdParam,
+  body('distance').isFloat({ min: 1 }).withMessage('distance required'),
+  body('timeSeconds').isFloat({ min: 0.1 }).withMessage('timeSeconds required'),
+  validate,
+  logPersonalBest,
+);
 
 router.get('/:athleteId/diagnoses', athleteIdParam, validate, getDiagnosisHistory);
 

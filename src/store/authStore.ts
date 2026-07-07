@@ -1,9 +1,22 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import * as authApi from '@/api/auth.api';
 import type { RegisterPayload } from '@/api/auth.api';
 import { STORAGE_KEYS } from '@/api/client';
 import type { User } from '@/types';
+
+function parseAuthError(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+      return 'Server is waking up — please try again in a moment.';
+    }
+    const msg = (err.response?.data as { message?: string })?.message;
+    if (msg) return msg;
+    if (!err.response) return 'Cannot reach the server. Check your connection.';
+  }
+  return err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+}
 
 // Re-export so callers can import the type from here if needed
 export type { RegisterPayload };
@@ -48,9 +61,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       ]);
       set({ user, accessToken, isAuthenticated: true });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Login failed. Please try again.';
-      set({ error: message });
+      set({ error: parseAuthError(err) });
       throw err;
     } finally {
       set({ isLoading: false });
@@ -67,11 +78,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       ]);
       set({ user, accessToken, isAuthenticated: true });
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Registration failed. Please try again.';
-      set({ error: message });
+      set({ error: parseAuthError(err) });
       throw err;
     } finally {
       set({ isLoading: false });

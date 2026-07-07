@@ -49,24 +49,39 @@ export async function insertSession(
 }
 
 export async function getPersonalBestsByAthlete(athleteId: string): Promise<PersonalBest[]> {
-  const { rows } = await pool.query<PersonalBest>(
-    `SELECT * FROM personal_bests WHERE athlete_id = $1 ORDER BY distance ASC`,
+  const { rows } = await pool.query(
+    `SELECT
+       athlete_id   AS "athleteId",
+       distance_metres AS distance,
+       time_seconds AS "timeSeconds",
+       recorded_at  AS "recordedAt"
+     FROM personal_bests
+     WHERE athlete_id = $1 AND is_current_pb = TRUE
+     ORDER BY distance_metres ASC`,
     [athleteId],
   );
-  return rows;
+  return rows as PersonalBest[];
 }
 
 export async function upsertPersonalBest(pb: PersonalBest): Promise<PersonalBest> {
-  const { rows } = await pool.query<PersonalBest>(
-    `INSERT INTO personal_bests (athlete_id, distance, time_seconds, recorded_at)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (athlete_id, distance)
-     DO UPDATE SET
-       time_seconds = EXCLUDED.time_seconds,
-       recorded_at  = EXCLUDED.recorded_at
-     WHERE personal_bests.time_seconds > EXCLUDED.time_seconds
-     RETURNING *`,
-    [pb.athleteId, pb.distance, pb.timeSeconds, pb.recordedAt],
+  // Mark old PB as not current, then insert new one if it's faster
+  await pool.query(
+    `UPDATE personal_bests
+     SET is_current_pb = FALSE
+     WHERE athlete_id = $1 AND distance_metres = $2 AND time_seconds > $3`,
+    [pb.athleteId, pb.distance, pb.timeSeconds],
   );
-  return rows[0] as PersonalBest;
+
+  const { rows } = await pool.query(
+    `INSERT INTO personal_bests (athlete_id, distance_metres, time_seconds, is_current_pb, recorded_at)
+     VALUES ($1, $2, $3, TRUE, NOW())
+     ON CONFLICT DO NOTHING
+     RETURNING
+       athlete_id   AS "athleteId",
+       distance_metres AS distance,
+       time_seconds AS "timeSeconds",
+       recorded_at  AS "recordedAt"`,
+    [pb.athleteId, pb.distance, pb.timeSeconds],
+  );
+  return (rows[0] ?? pb) as PersonalBest;
 }

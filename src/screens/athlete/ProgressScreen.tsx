@@ -29,21 +29,21 @@ const DISTANCES = ['20m', '30m', '60m', '100m', '200m'];
 const DISTANCE_VALUES = [20, 30, 60, 100, 200];
 const SUB_TABS = ['PBs', 'Log Time', 'History'];
 
-const SPARK_DATA = [13.8, 13.6, 13.5, 13.4, 13.3, 13.2];
-
 export default function ProgressScreen() {
   const user = useAuthStore((s) => s.user);
   const [subTab, setSubTab] = useState(0);
   const [distIdx, setDistIdx] = useState(3);
-  const [sec, setSec] = useState('13');
-  const [tenths, setTenths] = useState('2');
-  const [hundredths, setHundredths] = useState('40');
+  const [sec, setSec] = useState('');
+  const [tenths, setTenths] = useState('');
+  const [hundredths, setHundredths] = useState('');
   const [focusField, setFocusField] = useState<string | null>(null);
   const [logResult, setLogResult] = useState<'pb' | 'nopb' | null>(null);
+  const [loggedTime, setLoggedTime] = useState<number | null>(null);
   const [pbs, setPbs] = useState<PersonalBest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
+  const fetchPbs = useCallback(() => {
     if (!user) return;
     const athleteId = user.athleteId ?? user.id;
     setIsLoading(true);
@@ -54,15 +54,32 @@ export default function ProgressScreen() {
       .finally(() => setIsLoading(false));
   }, [user]);
 
-  const handleLog = useCallback(() => {
-    const timeSeconds = parseFloat(`${sec}.${tenths}${hundredths}`);
+  useEffect(() => { fetchPbs(); }, [fetchPbs]);
+
+  const handleLog = useCallback(async () => {
+    const s = sec.trim() || '0';
+    const t = tenths.trim() || '0';
+    const h = hundredths.trim() || '0';
+    const timeSeconds = parseFloat(`${s}.${t.padStart(1,'0')}${h.padStart(2,'0')}`);
+    if (isNaN(timeSeconds) || timeSeconds <= 0) return;
+
     const currentPb = pbs.find((p) => p.distance === DISTANCE_VALUES[distIdx]);
-    if (!currentPb || timeSeconds < currentPb.timeSeconds) {
-      setLogResult('pb');
-    } else {
-      setLogResult('nopb');
+    const isPb = !currentPb || timeSeconds < currentPb.timeSeconds;
+
+    if (!user) return;
+    const athleteId = user.athleteId ?? user.id;
+    setIsSaving(true);
+    try {
+      const updated = await trainingApi.logPersonalBest(athleteId, DISTANCE_VALUES[distIdx], timeSeconds);
+      setPbs(updated);
+      setLoggedTime(timeSeconds);
+      setLogResult(isPb ? 'pb' : 'nopb');
+    } catch {
+      setLogResult(isPb ? 'pb' : 'nopb');
+    } finally {
+      setIsSaving(false);
     }
-  }, [sec, tenths, hundredths, distIdx, pbs]);
+  }, [sec, tenths, hundredths, distIdx, pbs, user]);
 
   const pb100 = pbs.find((p) => p.distance === 100);
 
@@ -93,7 +110,7 @@ export default function ProgressScreen() {
         {subTab === 1 && (
           <LogTimeTab
             distIdx={distIdx}
-            setDistIdx={setDistIdx}
+            setDistIdx={(i) => { setDistIdx(i); setLogResult(null); setLoggedTime(null); }}
             sec={sec}
             setSec={setSec}
             tenths={tenths}
@@ -103,8 +120,10 @@ export default function ProgressScreen() {
             focusField={focusField}
             setFocusField={setFocusField}
             logResult={logResult}
+            loggedTime={loggedTime}
             onLog={handleLog}
-            pb100={pb100}
+            isSaving={isSaving}
+            pbs={pbs}
           />
         )}
         {subTab === 2 && <HistoryTab pbs={pbs} />}
@@ -147,14 +166,13 @@ function PBsTab({
             <Text style={styles.pbHeroTime}>
               {pb100 ? `${pb100.timeSeconds}s` : '—'}
             </Text>
-            {pb100 && <Text style={styles.pbTrend}>{'↓'} 0.3s in 4 weeks</Text>}
           </View>
           <Text style={styles.pbDate}>
             {pb100
               ? `Set ${new Date(pb100.recordedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
               : 'No time logged yet'}
           </Text>
-          <Sparkline data={SPARK_DATA} />
+          {pb100 && <Sparkline data={[pb100.timeSeconds]} />}
         </View>
 
         <PBCard dist="200m" pb={getPb(200)} />
@@ -258,8 +276,10 @@ interface LogTimeProps {
   focusField: string | null;
   setFocusField: (v: string | null) => void;
   logResult: 'pb' | 'nopb' | null;
+  loggedTime: number | null;
   onLog: () => void;
-  pb100?: PersonalBest;
+  isSaving: boolean;
+  pbs: PersonalBest[];
 }
 
 function LogTimeTab(props: LogTimeProps) {
@@ -275,11 +295,14 @@ function LogTimeTab(props: LogTimeProps) {
     focusField,
     setFocusField,
     logResult,
+    loggedTime,
     onLog,
-    pb100,
+    isSaving,
+    pbs,
   } = props;
 
-  const currentPbText = distIdx === 3 ? (pb100 ? `${pb100.timeSeconds}s` : '—') : '—';
+  const currentPb = pbs.find((p) => p.distance === DISTANCE_VALUES[distIdx]);
+  const currentPbText = currentPb ? `${currentPb.timeSeconds}s` : '—';
 
   return (
     <>
@@ -296,7 +319,7 @@ function LogTimeTab(props: LogTimeProps) {
       </View>
 
       <Text style={styles.pbCaption}>
-        {DISTANCES[distIdx]} — Current PB: {currentPbText}
+        {DISTANCES[distIdx]} PB: {currentPbText}
       </Text>
 
       <View style={styles.timeRow}>
@@ -329,20 +352,30 @@ function LogTimeTab(props: LogTimeProps) {
       </View>
       <Text style={styles.timeCaption}>seconds : tenths . hundredths</Text>
 
-      <TouchableOpacity style={styles.logBtn} onPress={onLog}>
-        <Text style={styles.logBtnIcon}>{'⏱'}</Text>
-        <Text style={styles.logBtnText}>Log This Time</Text>
+      <TouchableOpacity style={styles.logBtn} onPress={onLog} disabled={isSaving}>
+        {isSaving ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <>
+            <Text style={styles.logBtnIcon}>{'⏱'}</Text>
+            <Text style={styles.logBtnText}>Log This Time</Text>
+          </>
+        )}
       </TouchableOpacity>
 
-      {logResult === 'pb' && (
+      {logResult === 'pb' && loggedTime !== null && (
         <View style={styles.pbBanner}>
           <Text style={{ fontSize: 20 }}>{'🏆'}</Text>
-          <Text style={styles.pbBannerText}>New PB! Down from 13.5s — that's 0.3s faster!</Text>
+          <Text style={styles.pbBannerText}>
+            New PB! {loggedTime.toFixed(2)}s logged for {DISTANCES[distIdx]}!
+          </Text>
         </View>
       )}
-      {logResult === 'nopb' && (
+      {logResult === 'nopb' && loggedTime !== null && (
         <View style={styles.noPbBanner}>
-          <Text style={styles.noPbBannerText}>Logged — your PB is still 13.2s. Keep training!</Text>
+          <Text style={styles.noPbBannerText}>
+            Logged {loggedTime.toFixed(2)}s — your PB is still {currentPbText}. Keep training!
+          </Text>
         </View>
       )}
     </>

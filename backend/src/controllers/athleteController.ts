@@ -184,12 +184,31 @@ export async function getDiagnosisHistory(
   }
 }
 
+export async function logPersonalBest(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { athleteId } = req.params as { athleteId: string };
+    assertCanAccessAthlete(req, athleteId);
+    const { distance, timeSeconds } = req.body as { distance: number; timeSeconds: number };
+    const pb: PersonalBest = { athleteId, distance, timeSeconds, recordedAt: new Date().toISOString() };
+    await upsertPersonalBest(pb);
+    const pbs = await getPersonalBestsByAthlete(athleteId);
+    sendSuccess(res, pbs, 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ─── Guard ────────────────────────────────────────────────────────────────────
 
 function assertCanAccessAthlete(req: Request, athleteId: string): void {
-  const { role, userId: sub } = req.user ?? {};
+  const { role, userId: sub, athleteId: tokenAthleteId } = req.user ?? {};
   if (role === 'admin') return;
-  if (role === 'athlete' && sub === athleteId) return;
-  if (role === 'coach' || role === 'parent') return; // further scoping done at DB layer
+  // athlete_profiles.id is stored as athleteId in the JWT; userId is the users table id
+  if (role === 'athlete' && (tokenAthleteId === athleteId || sub === athleteId)) return;
+  if (role === 'coach' || role === 'parent') return;
   throw new AppError('Forbidden', ERROR_CODES.FORBIDDEN, 403);
 }

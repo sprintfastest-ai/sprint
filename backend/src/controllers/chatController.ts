@@ -5,6 +5,14 @@ import { ERROR_CODES } from '@/utils/constants';
 import pool from '@/db/pool';
 import { chatWithCoach } from '@/services/ai';
 
+async function resolveAthleteId(userId: string): Promise<string | null> {
+  const { rows } = await pool.query(
+    'SELECT id FROM athlete_profiles WHERE user_id = $1 LIMIT 1',
+    [userId],
+  );
+  return (rows[0] as { id: string } | undefined)?.id ?? null;
+}
+
 export async function sendMessage(
   req: Request,
   res: Response,
@@ -14,14 +22,16 @@ export async function sendMessage(
     const userId = req.user?.userId;
     if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
+    const athleteId = req.user?.athleteId ?? (await resolveAthleteId(userId));
+    if (!athleteId) throw new AppError('Athlete profile not found', ERROR_CODES.NOT_FOUND, 404);
+
     const { content } = req.body as { content: string };
 
-    // Fetch last 10 messages for context
     const { rows: history } = await pool.query(
       `SELECT role, content FROM chat_messages
-       WHERE user_id = $1
-       ORDER BY timestamp DESC LIMIT 10`,
-      [userId],
+       WHERE athlete_id = $1
+       ORDER BY created_at DESC LIMIT 10`,
+      [athleteId],
     );
 
     const geminiHistory = history
@@ -31,18 +41,17 @@ export async function sendMessage(
         parts: [{ text: m.content }] as [{ text: string }],
       }));
 
-    // Store user message
     await pool.query(
-      `INSERT INTO chat_messages (user_id, role, content) VALUES ($1, 'user', $2)`,
-      [userId, content],
+      `INSERT INTO chat_messages (athlete_id, role, content) VALUES ($1, 'user', $2)`,
+      [athleteId, content],
     );
 
     const reply = await chatWithCoach(userId, content, geminiHistory);
 
-    // Store assistant reply
     const { rows } = await pool.query(
-      `INSERT INTO chat_messages (user_id, role, content) VALUES ($1, 'assistant', $2) RETURNING *`,
-      [userId, reply],
+      `INSERT INTO chat_messages (athlete_id, role, content) VALUES ($1, 'assistant', $2)
+       RETURNING id, role, content, created_at AS timestamp`,
+      [athleteId, reply],
     );
 
     sendSuccess(res, rows[0], 201);
@@ -60,9 +69,18 @@ export async function getChatHistory(
     const userId = req.user?.userId;
     if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
+    const athleteId = req.user?.athleteId ?? (await resolveAthleteId(userId));
+    if (!athleteId) {
+      sendSuccess(res, []);
+      return;
+    }
+
     const { rows } = await pool.query(
-      `SELECT * FROM chat_messages WHERE user_id = $1 ORDER BY timestamp ASC`,
-      [userId],
+      `SELECT id, role, content, created_at AS timestamp
+       FROM chat_messages
+       WHERE athlete_id = $1
+       ORDER BY created_at ASC`,
+      [athleteId],
     );
     sendSuccess(res, rows);
   } catch (err) {

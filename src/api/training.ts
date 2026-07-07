@@ -41,10 +41,10 @@ export const trainingApi = {
     return data.data;
   },
 
-  logPersonalBest: async (pb: PersonalBest): Promise<PersonalBest> => {
-    const { data } = await client.post<ApiResponse<PersonalBest>>(
-      `/athletes/${pb.athleteId}/pbs`,
-      pb,
+  logPersonalBest: async (athleteId: string, distance: number, timeSeconds: number): Promise<PersonalBest[]> => {
+    const { data } = await client.post<ApiResponse<PersonalBest[]>>(
+      `/athletes/${athleteId}/pbs`,
+      { distance, timeSeconds },
     );
     return data.data;
   },

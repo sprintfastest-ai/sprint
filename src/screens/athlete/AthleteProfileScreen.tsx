@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
+import { useTraining } from '@/hooks/useTraining';
 
 const COLORS = {
   primary: '#1A6BB5',
@@ -32,12 +33,30 @@ export default function AthleteProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [loggingOut, setLoggingOut] = useState(false);
+  const { sessions, personalBests, loadSessionHistory, loadPersonalBests } = useTraining();
+
+  useEffect(() => {
+    loadSessionHistory();
+    loadPersonalBests();
+  }, [loadSessionHistory, loadPersonalBests]);
 
   const initials = user?.email
     ? user.email.slice(0, 2).toUpperCase()
     : '??';
 
   const firstName = user?.email?.split('@')[0] ?? 'Athlete';
+
+  const sessionCount = sessions.length;
+  const pb100m = personalBests.find((pb) => pb.distance === 100);
+  const pb100mStr = pb100m ? `${pb100m.timeSeconds.toFixed(2)}s` : '–';
+  const streak = (() => {
+    if (!sessions.length) return 0;
+    const days = new Set(sessions.map((s) => new Date(s.completedAt).toDateString()));
+    let count = 0;
+    const d = new Date();
+    while (days.has(d.toDateString())) { count++; d.setDate(d.getDate() - 1); }
+    return count;
+  })();
 
   const handleLogout = useCallback(() => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -104,15 +123,15 @@ export default function AthleteProfileScreen() {
         {/* Stats row */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>7</Text>
+            <Text style={styles.statValue}>{streak}</Text>
             <Text style={styles.statLabel}>Day Streak</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>13.2s</Text>
+            <Text style={styles.statValue}>{pb100mStr}</Text>
             <Text style={styles.statLabel}>100m PB</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>24</Text>
+            <Text style={styles.statValue}>{sessionCount}</Text>
             <Text style={styles.statLabel}>Sessions</Text>
           </View>
         </View>
