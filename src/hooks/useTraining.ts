@@ -28,6 +28,10 @@ export function useTraining() {
     if (athleteId) fetchPersonalBests(athleteId);
   }, [athleteId, fetchPersonalBests]);
 
+  const loadSessionHistory = useCallback(() => {
+    if (athleteId) fetchSessionHistory(athleteId);
+  }, [athleteId, fetchSessionHistory]);
+
   return {
     currentPlan,
     sessions,
@@ -36,6 +40,6 @@ export function useTraining() {
     error,
     loadWeeklyPlan,
     loadPersonalBests,
-    fetchSessionHistory,
+    loadSessionHistory,
   };
 }

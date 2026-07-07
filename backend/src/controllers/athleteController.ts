@@ -184,6 +184,24 @@ export async function getDiagnosisHistory(
   }
 }
 
+export async function logPersonalBest(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { athleteId } = req.params as { athleteId: string };
+    assertCanAccessAthlete(req, athleteId);
+    const { distance, timeSeconds } = req.body as { distance: number; timeSeconds: number };
+    const pb: PersonalBest = { athleteId, distance, timeSeconds, recordedAt: new Date().toISOString() };
+    await upsertPersonalBest(pb);
+    const pbs = await getPersonalBestsByAthlete(athleteId);
+    sendSuccess(res, pbs, 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ─── Guard ────────────────────────────────────────────────────────────────────
 
 function assertCanAccessAthlete(req: Request, athleteId: string): void {

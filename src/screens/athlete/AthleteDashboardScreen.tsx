@@ -32,12 +32,13 @@ type NavProp = BottomTabNavigationProp<AthleteTabParamList>;
 export default function AthleteDashboardScreen() {
   const navigation = useNavigation<NavProp>();
   const user = useAuthStore((s) => s.user);
-  const { currentPlan, personalBests, loadWeeklyPlan, loadPersonalBests, isLoading } = useTraining();
+  const { currentPlan, personalBests, sessions, loadWeeklyPlan, loadPersonalBests, loadSessionHistory, isLoading } = useTraining();
 
   useEffect(() => {
     loadWeeklyPlan(getWeekStartDate());
     loadPersonalBests();
-  }, [loadWeeklyPlan, loadPersonalBests]);
+    loadSessionHistory();
+  }, [loadWeeklyPlan, loadPersonalBests, loadSessionHistory]);
 
   const firstName = user?.email?.split('@')[0] ?? 'Athlete';
   const today = new Date();
@@ -53,6 +54,21 @@ export default function AthleteDashboardScreen() {
   const pb100m = personalBests.find((pb) => pb.distance === 100);
   const pb100mStr = pb100m ? `${pb100m.timeSeconds.toFixed(2)}s` : '–';
   const drillNames = todayDay?.drills.slice(0, 4).map((d) => d.name) ?? [];
+
+  const sessionCount = sessions.length;
+  const streak = (() => {
+    if (!sessions.length) return 0;
+    const days = new Set(
+      sessions.map((s) => new Date(s.completedAt).toDateString())
+    );
+    let count = 0;
+    const d = new Date();
+    while (days.has(d.toDateString())) {
+      count++;
+      d.setDate(d.getDate() - 1);
+    }
+    return count;
+  })();
 
   const handleStartSession = useCallback(() => {
     navigation.navigate('Training');
@@ -86,11 +102,11 @@ export default function AthleteDashboardScreen() {
               <FlameIcon />
             </View>
             <View>
-              <Text style={styles.streakCount}>7</Text>
+              <Text style={styles.streakCount}>{streak}</Text>
               <Text style={styles.streakLabel}>Day Streak</Text>
             </View>
           </View>
-          <Text style={styles.streakBest}>🏆 Best: 12 days</Text>
+          <Text style={styles.streakBest}>{'🏆'} {sessionCount} session{sessionCount !== 1 ? 's' : ''}</Text>
         </View>
 
         {/* Today's session card */}
@@ -145,7 +161,7 @@ export default function AthleteDashboardScreen() {
         <View style={styles.statsRow}>
           {/* Weekly goal ring */}
           <View style={[styles.statCard, { alignItems: 'center' }]}>
-            <RingProgress value={3} max={5} />
+            <RingProgress value={Math.min(sessionCount, 5)} max={5} />
             <Text style={[styles.sectionLabel, { marginTop: 10 }]}>WEEKLY GOAL</Text>
           </View>
 
