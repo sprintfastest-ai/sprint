@@ -11,7 +11,8 @@ function parseAuthError(err: unknown): string {
     if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
       return 'Server is waking up — please try again in a moment.';
     }
-    const msg = (err.response?.data as { message?: string })?.message;
+    const body = err.response?.data as { message?: string; error?: string } | undefined;
+    const msg = body?.message ?? body?.error;
     if (msg) return msg;
     if (!err.response) return 'Cannot reach the server. Check your connection.';
   }
