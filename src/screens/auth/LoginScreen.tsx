@@ -29,9 +29,12 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     clearError();
+    if (!email.trim() || !password) {
+      // Guard against autofill not syncing with React state
+      return;
+    }
     try {
       await login(email.trim().toLowerCase(), password);
-      // RootNavigator reacts to isAuthenticated and drives the redirect
     } catch {
       // error is set in the store — rendered below
     }
@@ -69,7 +72,8 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => setEmail(t)}
+              onChange={(e) => setEmail(e.nativeEvent.text)}
               placeholder="you@example.com"
               placeholderTextColor={COLORS.inputPlaceholder}
               keyboardType="email-address"

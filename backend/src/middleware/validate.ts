@@ -73,7 +73,7 @@ export const validateRegister: ValidationChain[] = [
 ];
 
 export const validateLogin: ValidationChain[] = [
-  body('email').isEmail().withMessage('A valid email address is required.'),
+  body('email').notEmpty().withMessage('Email is required.').isString(),
   body('password').notEmpty().withMessage('Password is required.'),
 ];
 
