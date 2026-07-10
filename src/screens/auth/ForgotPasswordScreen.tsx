@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { requestPasswordReset } from '@/api/auth.api';
@@ -75,7 +76,7 @@ export default function ForgotPasswordScreen() {
                 accessibilityRole="alert"
               >
                 <View style={styles.successBanner}>
-                  <Text style={styles.successBannerIcon}>✉️</Text>
+                  <Ionicons name="mail" size={24} color="#1A6BB5" style={styles.successBannerIcon} />
                   <View style={styles.successBannerText}>
                     <Text style={styles.successBannerTitle}>Check your email</Text>
                     <Text style={styles.successBannerBody}>

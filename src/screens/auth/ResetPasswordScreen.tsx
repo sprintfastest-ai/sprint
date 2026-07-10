@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { resetPassword } from '@/api/auth.api';
@@ -102,7 +103,7 @@ export default function ResetPasswordScreen() {
                 accessibilityLiveRegion="polite"
                 accessibilityRole="alert"
               >
-                <Text style={styles.successIcon}>✅</Text>
+                <Ionicons name="checkmark-circle" size={52} color="#6DC400" style={styles.successIcon} />
                 <Text style={styles.successTitle}>Password updated</Text>
                 <Text style={styles.successBody}>
                   Your password has been changed. You can now log in with your

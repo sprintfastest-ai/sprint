@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface ErrorMessageProps {
   message: string | null | undefined;
@@ -15,7 +16,7 @@ export default function ErrorMessage({ message, style }: ErrorMessageProps) {
 
   return (
     <View style={[styles.container, style]}>
-      <Text style={styles.icon}>⚠</Text>
+      <Ionicons name="warning" size={16} color="#ff4444" style={{ marginTop: 2 }} />
       <Text style={styles.text}>{message}</Text>
     </View>
   );

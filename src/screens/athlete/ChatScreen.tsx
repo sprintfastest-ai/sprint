@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { chatApi } from '@/api/chat';
@@ -159,7 +160,7 @@ export default function ChatScreen() {
             disabled={!input.trim()}
             accessibilityLabel="Send message"
           >
-            <Text style={styles.sendIcon}>{'↑'}</Text>
+            <Ionicons name="send" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

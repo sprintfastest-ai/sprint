@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { AthleteTabParamList } from './types';
 import AthleteDashboardScreen from '@/screens/athlete/AthleteDashboardScreen';
 import TrainingScreen from '@/screens/athlete/TrainingScreen';
@@ -17,22 +17,25 @@ const COLORS = {
   border: '#E0E0E0',
 };
 
-function TabIcon({ type, color }: { type: string; color: string }) {
-  const icons: Record<string, string> = {
-    Dashboard: '⌂',
-    Training:  '📅',
-    Progress:  '📊',
-    Chat:      '💬',
-    Profile:   '👤',
-  };
-  return <Text style={{ fontSize: 22, color }}>{icons[type] ?? '●'}</Text>;
-}
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+const TAB_ICONS: Record<string, { active: IoniconsName; inactive: IoniconsName }> = {
+  Dashboard: { active: 'home',          inactive: 'home-outline' },
+  Training:  { active: 'barbell',       inactive: 'barbell-outline' },
+  Progress:  { active: 'bar-chart',     inactive: 'bar-chart-outline' },
+  Chat:      { active: 'chatbubbles',   inactive: 'chatbubbles-outline' },
+  Profile:   { active: 'person-circle', inactive: 'person-circle-outline' },
+};
 
 export default function AthleteNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ color }) => <TabIcon type={route.name} color={color} />,
+        tabBarIcon: ({ color, focused }) => {
+          const icons = TAB_ICONS[route.name];
+          const name = icons ? (focused ? icons.active : icons.inactive) : 'ellipse';
+          return <Ionicons name={name} size={24} color={color} />;
+        },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.grey,
         tabBarStyle: {

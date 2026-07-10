@@ -10,6 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
 import { profileApi } from '@/api/training';
@@ -237,13 +238,13 @@ export default function AthleteProfileScreen() {
 
         {/* Settings */}
         <View style={styles.settingsCard}>
-          <SettingsRow icon="🔔" label="Notifications" onPress={handleNotifications} />
+          <SettingsRow icon="notifications-outline" label="Notifications" onPress={handleNotifications} />
           <View style={styles.rowDivider} />
-          <SettingsRow icon="🔒" label="Change Password" onPress={handleChangePassword} />
+          <SettingsRow icon="lock-closed-outline" label="Change Password" onPress={handleChangePassword} />
           <View style={styles.rowDivider} />
-          <SettingsRow icon="📋" label="Privacy Policy" onPress={handlePrivacyPolicy} />
+          <SettingsRow icon="document-text-outline" label="Privacy Policy" onPress={handlePrivacyPolicy} />
           <View style={styles.rowDivider} />
-          <SettingsRow icon="❓" label="Help & Support" onPress={handleHelpSupport} />
+          <SettingsRow icon="help-circle-outline" label="Help & Support" onPress={handleHelpSupport} />
         </View>
 
         {/* Sign out */}
@@ -266,12 +267,14 @@ export default function AthleteProfileScreen() {
   );
 }
 
-function SettingsRow({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+function SettingsRow({ icon, label, onPress }: { icon: IoniconsName; label: string; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.settingsRow} onPress={onPress} activeOpacity={0.7}>
-      <Text style={styles.settingsIcon}>{icon}</Text>
+      <Ionicons name={icon} size={20} color="#1A6BB5" style={styles.settingsIcon} />
       <Text style={styles.settingsLabel}>{label}</Text>
-      <Text style={styles.settingsChevron}>›</Text>
+      <Ionicons name="chevron-forward" size={16} color="#6B7280" />
     </TouchableOpacity>
   );
 }

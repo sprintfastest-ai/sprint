@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -106,7 +107,10 @@ export default function AthleteDashboardScreen() {
               <Text style={styles.streakLabel}>Day Streak</Text>
             </View>
           </View>
-          <Text style={styles.streakBest}>{'🏆'} {sessionCount} session{sessionCount !== 1 ? 's' : ''}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="trophy" size={14} color={COLORS.orange} />
+            <Text style={styles.streakBest}>{sessionCount} session{sessionCount !== 1 ? 's' : ''}</Text>
+          </View>
         </View>
 
         {/* Today's session card */}
@@ -215,7 +219,7 @@ function RingProgress({ value, max }: { value: number; max: number }) {
       {/* Center label */}
       <View style={{ alignItems: 'center' }}>
         {complete ? (
-          <Text style={{ fontSize: 18, color: COLORS.green }}>✓</Text>
+          <Ionicons name="checkmark-circle" size={22} color={COLORS.green} />
         ) : (
           <>
             <Text style={{ fontSize: 17, fontWeight: '700', color: COLORS.text, lineHeight: 20 }}>
@@ -266,25 +270,23 @@ function SpeedLines() {
 }
 
 function FlameIcon() {
-  return <Text style={{ fontSize: 36 }}>🔥</Text>;
+  return <Ionicons name="flame" size={36} color={COLORS.orange} />;
 }
 
 function BellIcon() {
-  return (
-    <Text style={{ fontSize: 22, color: COLORS.primary }}>🔔</Text>
-  );
+  return <Ionicons name="notifications-outline" size={22} color={COLORS.primary} />;
 }
 
 function ClockIcon() {
-  return <Text style={{ fontSize: 14 }}>🕐</Text>;
+  return <Ionicons name="time-outline" size={14} color={COLORS.grey} />;
 }
 
 function CheckCircleIcon() {
-  return <Text style={{ fontSize: 14, color: COLORS.green }}>✓</Text>;
+  return <Ionicons name="checkmark-circle" size={16} color={COLORS.green} />;
 }
 
 function RobotIcon() {
-  return <Text style={{ fontSize: 18 }}>🤖</Text>;
+  return <Ionicons name="sparkles" size={20} color={COLORS.primary} />;
 }
 
 // ── Styles ────────────────────────────────────────────────────────

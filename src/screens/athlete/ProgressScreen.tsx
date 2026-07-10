@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { trainingApi } from '@/api/training';
 import type { PersonalBest } from '@/types';
@@ -174,7 +175,7 @@ function PBsTab({
         <TouchableOpacity style={styles.pbHero} onPress={() => onLogDistance(3)} activeOpacity={0.8}>
           <View style={styles.pbHeroHeader}>
             <Text style={styles.pbDistLabel}>100m</Text>
-            <Text style={{ fontSize: 18 }}>{'🏆'}</Text>
+            <Ionicons name="trophy" size={18} color="#F05A1A" />
           </View>
           <View style={styles.pbHeroTimeRow}>
             <Text style={styles.pbHeroTime}>
@@ -215,7 +216,7 @@ function PBCard({ dist, pb, onPress }: { dist: string; pb?: PersonalBest; onPres
     <TouchableOpacity style={styles.pbCard} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.pbCardHeader}>
         <Text style={styles.pbDistLabel}>{dist}</Text>
-        <Text style={{ fontSize: 12, color: COLORS.grey }}>{'⏱'}</Text>
+        <Ionicons name="timer-outline" size={14} color={COLORS.grey} />
       </View>
       <Text style={styles.pbCardTime}>{pb ? `${pb.timeSeconds}s` : '—'}</Text>
       <Text style={styles.pbDate}>
@@ -373,7 +374,7 @@ function LogTimeTab(props: LogTimeProps) {
           <ActivityIndicator color="#fff" />
         ) : (
           <>
-            <Text style={styles.logBtnIcon}>{'⏱'}</Text>
+            <Ionicons name="stopwatch-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
             <Text style={styles.logBtnText}>Log This Time</Text>
           </>
         )}
@@ -381,7 +382,7 @@ function LogTimeTab(props: LogTimeProps) {
 
       {logResult === 'pb' && loggedTime !== null && (
         <View style={styles.pbBanner}>
-          <Text style={{ fontSize: 20 }}>{'🏆'}</Text>
+          <Ionicons name="trophy" size={22} color="#F05A1A" />
           <Text style={styles.pbBannerText}>
             New PB! {loggedTime.toFixed(2)}s logged for {DISTANCES[distIdx]}!
           </Text>
@@ -462,7 +463,7 @@ function HistoryTab({ pbs }: { pbs: PersonalBest[] }) {
             {new Date(pb.recordedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
           </Text>
           <View style={styles.trendDot}>
-            <Text style={{ fontSize: 12, color: COLORS.green }}>{'↑'}</Text>
+            <Ionicons name="trending-up" size={14} color={COLORS.green} />
           </View>
         </View>
       ))}

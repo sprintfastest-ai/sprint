@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { trainingApi } from '@/api/training';
 import type { TrainingPlan, TrainingDay, Drill } from '@/types';
@@ -185,9 +186,15 @@ export default function TrainingScreen() {
 
                 {expanded === i && (
                   <View style={[styles.cueRow, i < todayDay.drills.length - 1 && styles.drillRowBorder]}>
-                    <Text style={styles.cueText}>💡 {drill.cue}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 5 }}>
+                      <Ionicons name="bulb-outline" size={14} color={COLORS.orange} style={{ marginTop: 2 }} />
+                      <Text style={[styles.cueText, { flex: 1 }]}>{drill.cue}</Text>
+                    </View>
                     {drill.restSeconds > 0 && (
-                      <Text style={[styles.cueText, { marginTop: 4 }]}>⏱ {drill.restSeconds}s rest</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      <Ionicons name="timer-outline" size={13} color="#6B7280" />
+                      <Text style={styles.cueText}>{drill.restSeconds}s rest</Text>
+                    </View>
                     )}
                   </View>
                 )}
@@ -196,7 +203,7 @@ export default function TrainingScreen() {
 
             {todayDay.coachingCues.length > 0 && (
               <View style={styles.coachCueBanner}>
-                <Text style={styles.coachCueIcon}>{'➤'}</Text>
+                <Ionicons name="chevron-forward-circle" size={18} color="#1A6BB5" style={{ marginRight: 6 }} />
                 <Text style={styles.coachCueText}>
                   <Text style={styles.coachCueLabel}>Coach's Cue: </Text>
                   {todayDay.coachingCues[todayDay.coachingCues.length - 1]}
@@ -210,7 +217,7 @@ export default function TrainingScreen() {
                 onPress={handleComplete}
                 disabled={completed}
               >
-                <Text style={styles.completeBtnIcon}>{'✓'}</Text>
+                <Ionicons name={completed ? 'checkmark-circle' : 'checkmark-circle-outline'} size={20} color="#fff" style={{ marginRight: 6 }} />
                 <Text style={styles.completeBtnText}>
                   {completed ? 'Session Complete!' : 'Complete Session'}
                 </Text>
