@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -54,7 +55,12 @@ export default function LoginScreen() {
         >
           {/* ── Wordmark ── */}
           <View style={styles.header} accessibilityRole="header">
-            <Text style={styles.icon} accessibilityElementsHidden>⚡</Text>
+            <Image
+              source={require('@/assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+              accessibilityLabel="SprintFastest logo"
+            />
             <Text style={styles.wordmark}>SprintFastest</Text>
           </View>
 
@@ -184,10 +190,9 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginBottom: SPACING.xs,
   },
-  icon: {
-    // ⚡ lightning bolt — orange per Figma spec
-    fontSize: 28,
-    color: COLORS.orange,
+  logoImage: {
+    width: 44,
+    height: 44,
   },
   wordmark: {
     fontSize: 36,
