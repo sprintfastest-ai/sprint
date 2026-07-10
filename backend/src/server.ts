@@ -1,4 +1,4 @@
-// Load env first — nothing else imports before this
+// Load env first — nothing else imports before this (deploy: 2026-07-10)
 import dotenv from 'dotenv';
 dotenv.config();
 
