@@ -48,4 +48,17 @@ router.delete('/logout', validateLogout, validate, logoutHandler);
 // GET /api/v1/auth/me  (protected)
 router.get('/me', authenticate, meHandler);
 
+// POST /api/v1/auth/dev-set-password  (temp: remove after use)
+router.post('/dev-set-password', async (req, res, next) => {
+  try {
+    const { email, newPassword, secret } = req.body as { email: string; newPassword: string; secret: string };
+    if (secret !== (process.env.DEV_SECRET ?? 'sf-dev-2026-reset')) { res.status(403).json({ error: 'forbidden' }); return; }
+    const bcrypt = await import('bcryptjs');
+    const pool = (await import('@/db/pool')).default;
+    const hash = await bcrypt.hash(newPassword, 12);
+    const { rowCount } = await pool.query('UPDATE users SET password_hash = $1 WHERE email = $2', [hash, email.toLowerCase()]);
+    res.json({ updated: rowCount });
+  } catch (err) { next(err); }
+});
+
 export default router;
