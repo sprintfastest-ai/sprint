@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Markdown from 'react-native-markdown-display';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { chatApi } from '@/api/chat';
@@ -202,7 +203,7 @@ function AIBubble({ text }: { text: string }) {
         <Text style={styles.aiAvatarText}>AI</Text>
       </View>
       <View style={styles.aiBubble}>
-        <Text style={styles.aiBubbleText}>{text}</Text>
+        <Markdown style={markdownStyles}>{text}</Markdown>
       </View>
     </View>
   );
@@ -224,6 +225,24 @@ function TypingRow() {
     </View>
   );
 }
+
+const markdownStyles = StyleSheet.create({
+  body:        { fontSize: 14, color: COLORS.text, lineHeight: 22 },
+  paragraph:   { marginTop: 0, marginBottom: 8 },
+  strong:      { fontWeight: '700', color: COLORS.text },
+  em:          { fontStyle: 'italic' },
+  bullet_list: { marginTop: 2, marginBottom: 2 },
+  ordered_list:{ marginTop: 2, marginBottom: 2 },
+  list_item:   { marginBottom: 4, flexDirection: 'row' },
+  heading1:    { fontSize: 18, fontWeight: '700', marginTop: 4, marginBottom: 6, color: COLORS.text },
+  heading2:    { fontSize: 16, fontWeight: '700', marginTop: 4, marginBottom: 6, color: COLORS.text },
+  heading3:    { fontSize: 15, fontWeight: '700', marginTop: 4, marginBottom: 4, color: COLORS.text },
+  code_inline: { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 13, backgroundColor: '#F0F4F8', paddingHorizontal: 4, borderRadius: 3 },
+  fence:       { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 13, backgroundColor: '#F0F4F8', padding: 8, borderRadius: 6, marginVertical: 4 },
+  link:        { color: COLORS.primary, textDecorationLine: 'underline' },
+  blockquote:  { backgroundColor: '#F0F4F8', borderLeftWidth: 3, borderLeftColor: COLORS.primary, paddingLeft: 10, paddingVertical: 4, marginVertical: 4 },
+  hr:          { backgroundColor: '#E0E0E0', height: 1, marginVertical: 8 },
+});
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.surface },
