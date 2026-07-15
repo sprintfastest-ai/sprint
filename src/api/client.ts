@@ -80,12 +80,17 @@ client.interceptors.response.use(
         const refreshToken = await AsyncStorage.getItem(
           STORAGE_KEYS.REFRESH_TOKEN,
         );
-        const response = await axios.post<{ accessToken: string }>(
-          `${API_BASE_URL}/auth/refresh`,
-          { refreshToken },
-        );
-        const { accessToken } = response.data;
-        await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+        if (!refreshToken) throw new Error('No refresh token stored');
+        const response = await axios.post<{
+          success: boolean;
+          data: { accessToken: string; refreshToken: string };
+        }>(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        if (!accessToken) throw new Error('Refresh returned no access token');
+        await AsyncStorage.multiSet([
+          [STORAGE_KEYS.ACCESS_TOKEN, accessToken],
+          [STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken],
+        ]);
         processQueue(null, accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return client(originalRequest);
