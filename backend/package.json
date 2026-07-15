@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "npm install --include=dev && tsc && tsc-alias",
+    "build": "npm install --include=dev && tsc && tsc-alias && mkdir -p dist/db/migrations && cp src/db/migrations/*.sql dist/db/migrations/",
     "start": "node dist/db/migrate.js && node dist/server.js",
     "migrate": "ts-node -r tsconfig-paths/register src/db/migrate.ts",
     "type-check": "tsc --noEmit",
