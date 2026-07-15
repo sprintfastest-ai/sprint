@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -63,6 +63,8 @@ export default function RegisterScreen() {
   const { register, isLoading, error, clearError } = useAuth();
 
   // Role
+  useEffect(() => { clearError(); }, []);
+
   const [role, setRole] = useState<User['role']>('athlete');
 
   // Common fields

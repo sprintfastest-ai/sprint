@@ -81,14 +81,21 @@ export default function ChatScreen() {
     scrollToEnd();
 
     try {
-      const reply = await chatApi.sendMessage(text);
+      // Retry once on transient failures (Gemini/Render hiccup)
+      let reply: ChatMessage;
+      try {
+        reply = await chatApi.sendMessage(text);
+      } catch {
+        await new Promise((r) => setTimeout(r, 1500));
+        reply = await chatApi.sendMessage(text);
+      }
       setMessages((prev) => [...prev, reply]);
     } catch {
       const fallback: ChatMessage = {
         id: String(Date.now() + 1),
         userId: 'ai',
         role: 'assistant',
-        content: "I'm having trouble connecting right now. Please try again in a moment.",
+        content: "⚠️ Couldn't reach the coach right now. Tap your message to resend.",
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, fallback]);

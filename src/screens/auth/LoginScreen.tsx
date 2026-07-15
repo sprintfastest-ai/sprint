@@ -28,6 +28,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPw, setShowPw]     = useState(false);
 
+  React.useEffect(() => { clearError(); }, []);
+
   const handleLogin = async () => {
     clearError();
     if (!email.trim() || !password) {

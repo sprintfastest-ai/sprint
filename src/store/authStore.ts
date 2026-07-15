@@ -120,12 +120,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       );
       set({ user, accessToken: currentToken, isAuthenticated: true });
     } catch {
-      // Token invalid / refresh failed — start unauthenticated
+      // Token invalid / refresh failed — start unauthenticated, clear any stale errors
       await AsyncStorage.multiRemove([
         STORAGE_KEYS.ACCESS_TOKEN,
         STORAGE_KEYS.REFRESH_TOKEN,
       ]);
-      set({ user: null, accessToken: null, isAuthenticated: false });
+      set({ user: null, accessToken: null, isAuthenticated: false, error: null });
     } finally {
       set({ isLoading: false });
     }
