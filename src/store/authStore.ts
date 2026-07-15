@@ -40,9 +40,11 @@ interface AuthState {
    */
   restoreSession: () => Promise<void>;
   clearError: () => void;
+  /** Patches the locally-cached user object (e.g. after onboarding completes). */
+  updateUser: (patch: Partial<User>) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
   isAuthenticated: false,
@@ -132,4 +134,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  updateUser: (patch) => {
+    const current = get().user;
+    if (!current) return;
+    set({ user: { ...current, ...patch } });
+  },
 }));

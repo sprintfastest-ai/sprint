@@ -44,9 +44,17 @@ export async function insertPlan(plan: Omit<TrainingPlan, 'id' | 'createdAt'>): 
   return rows[0] as TrainingPlan;
 }
 
+const SESSION_COLUMNS = `
+  id,
+  athlete_id       AS "athleteId",
+  plan_id          AS "planId",
+  completed_at     AS "completedAt",
+  drills_completed AS "timesRecorded"
+`;
+
 export async function getSessionsByAthlete(athleteId: string): Promise<Session[]> {
   const { rows } = await pool.query<Session>(
-    'SELECT * FROM sessions WHERE athlete_id = $1 ORDER BY completed_at DESC',
+    `SELECT ${SESSION_COLUMNS} FROM sessions WHERE athlete_id = $1 ORDER BY completed_at DESC`,
     [athleteId],
   );
   return rows;
@@ -57,10 +65,12 @@ export async function insertSession(
   planId: string,
   timesRecorded: PersonalBest[],
 ): Promise<Session> {
+  // `drills_completed` is the actual JSONB column on `sessions` — reused here
+  // to store the times recorded for this session (no dedicated column exists).
   const { rows } = await pool.query<Session>(
-    `INSERT INTO sessions (athlete_id, plan_id, times_recorded)
+    `INSERT INTO sessions (athlete_id, plan_id, drills_completed)
      VALUES ($1, $2, $3)
-     RETURNING *`,
+     RETURNING ${SESSION_COLUMNS}`,
     [athleteId, planId, JSON.stringify(timesRecorded)],
   );
   return rows[0] as Session;

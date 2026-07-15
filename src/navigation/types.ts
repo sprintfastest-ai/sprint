@@ -4,6 +4,7 @@ import type { CompositeNavigationProp, CompositeScreenProps } from '@react-navig
 
 export type RootStackParamList = {
   Auth: undefined;
+  Onboarding: undefined;
   AthleteTabs: undefined;
   CoachTabs: undefined;
   ParentTabs: undefined;
@@ -23,6 +24,15 @@ export type AthleteTabParamList = {
   Progress: undefined;
   Chat: undefined;
   Profile: undefined;
+};
+
+/** Screens pushed above the athlete bottom-tab navigator (modals/detail views). */
+export type AthleteStackParamList = {
+  Tabs: undefined;
+  DiagnosisQuiz: undefined;
+  DiagnosisResults: { diagnosis: import('@/types').Diagnosis };
+  Achievements: undefined;
+  Paywall: { context?: string } | undefined;
 };
 
 export type CoachTabParamList = {

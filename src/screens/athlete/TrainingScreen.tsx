@@ -9,12 +9,19 @@ import {
   Platform,
   UIManager,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { trainingApi } from '@/api/training';
+import { getBadgeInfo } from '@/utils/badges';
 import type { TrainingPlan, TrainingDay, Drill } from '@/types';
+import type { AthleteStackParamList } from '@/navigation/types';
+
+type NavProp = NativeStackNavigationProp<AthleteStackParamList>;
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -44,6 +51,7 @@ function getWeekStartDate(): string {
 }
 
 export default function TrainingScreen() {
+  const navigation = useNavigation<NavProp>();
   const user = useAuthStore((s) => s.user);
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
@@ -90,11 +98,18 @@ export default function TrainingScreen() {
     const athleteId = user.athleteId ?? user.id;
     setCompleted(true);
     try {
-      await trainingApi.completeSession(athleteId, plan.id, []);
+      const session = await trainingApi.completeSession(athleteId, plan.id, []);
+      if (session.newBadges?.length) {
+        const names = session.newBadges.map((b) => getBadgeInfo(b.badgeType).label).join(', ');
+        Alert.alert('New Badge Unlocked! 🎉', names, [
+          { text: 'View Badges', onPress: () => navigation.navigate('Achievements') },
+          { text: 'Nice!', style: 'cancel' },
+        ]);
+      }
     } catch {
       // best-effort — UI already reflects complete
     }
-  }, [plan, user]);
+  }, [plan, user, navigation]);
 
   const weekStart = plan ? new Date(plan.weekStartDate) : new Date();
   const weekLabel = weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -144,6 +159,13 @@ export default function TrainingScreen() {
       </View>
 
       <View style={styles.separator} />
+
+      {plan?.isTaperWeek && (
+        <View style={styles.taperBanner}>
+          <Ionicons name="trending-down" size={16} color={COLORS.orange} />
+          <Text style={styles.taperText}>Race Taper Week — reduced volume to keep you fresh for race day.</Text>
+        </View>
+      )}
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {loading ? (
@@ -247,6 +269,11 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.surface },
   scroll: { flex: 1, backgroundColor: COLORS.bg },
   content: { padding: 14, paddingBottom: 32 },
+  taperBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.orangeLight, paddingHorizontal: 16, paddingVertical: 10,
+  },
+  taperText: { flex: 1, fontSize: 12, color: COLORS.text, fontWeight: '600' },
 
   header: {
     backgroundColor: COLORS.surface,

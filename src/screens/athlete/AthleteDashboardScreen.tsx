@@ -11,10 +11,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
 import { getWeekStartDate } from '@/utils/formatters';
-import type { AthleteTabParamList } from '@/navigation/types';
+import { profileApi } from '@/api/training';
+import type { AthleteTabParamList, AthleteStackParamList } from '@/navigation/types';
 
 const COLORS = {
   primary: '#1A6BB5',
@@ -29,17 +31,26 @@ const COLORS = {
 };
 
 type NavProp = BottomTabNavigationProp<AthleteTabParamList>;
+type StackNavProp = NativeStackNavigationProp<AthleteStackParamList>;
 
 export default function AthleteDashboardScreen() {
   const navigation = useNavigation<NavProp>();
+  const stackNavigation = useNavigation<StackNavProp>();
   const user = useAuthStore((s) => s.user);
   const { currentPlan, personalBests, sessions, loadWeeklyPlan, loadPersonalBests, loadSessionHistory, isLoading } = useTraining();
+  const [needsRediagnosis, setNeedsRediagnosis] = React.useState(false);
 
   useEffect(() => {
     loadWeeklyPlan(getWeekStartDate());
     loadPersonalBests();
     loadSessionHistory();
   }, [loadWeeklyPlan, loadPersonalBests, loadSessionHistory]);
+
+  useEffect(() => {
+    profileApi.getMyProfile()
+      .then((p) => setNeedsRediagnosis(!!p.needsRediagnosis))
+      .catch(() => undefined);
+  }, []);
 
   const firstName = user?.email?.split('@')[0] ?? 'Athlete';
   const today = new Date();
@@ -112,6 +123,26 @@ export default function AthleteDashboardScreen() {
             <Text style={styles.streakBest}>{sessionCount} session{sessionCount !== 1 ? 's' : ''}</Text>
           </View>
         </View>
+
+        {/* Quick links: badges + upgrade */}
+        <View style={styles.quickLinksRow}>
+          <TouchableOpacity style={styles.quickLink} onPress={() => stackNavigation.navigate('Achievements')}>
+            <Ionicons name="ribbon" size={18} color={COLORS.orange} />
+            <Text style={styles.quickLinkText}>Badges</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickLink} onPress={() => stackNavigation.navigate('Paywall', undefined)}>
+            <Ionicons name="flash" size={18} color={COLORS.primary} />
+            <Text style={styles.quickLinkText}>Go Premium</Text>
+          </TouchableOpacity>
+        </View>
+
+        {needsRediagnosis && (
+          <TouchableOpacity style={styles.rediagnosisBanner} onPress={() => stackNavigation.navigate('DiagnosisQuiz')}>
+            <Ionicons name="medical" size={18} color={COLORS.primary} />
+            <Text style={styles.rediagnosisText}>Time to retake your weakness diagnosis — tap to start.</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+          </TouchableOpacity>
+        )}
 
         {/* Today's session card */}
         <View style={styles.sessionCard}>
@@ -295,6 +326,19 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.surface },
   scroll: { flex: 1, backgroundColor: COLORS.bg },
   content: { paddingBottom: 32 },
+  quickLinksRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 14 },
+  quickLink: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: 12, paddingVertical: 12,
+  },
+  quickLinkText: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  rediagnosisBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.blueLight, marginHorizontal: 20, marginBottom: 14,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+  },
+  rediagnosisText: { flex: 1, fontSize: 12, color: COLORS.text, fontWeight: '600' },
 
   header: {
     flexDirection: 'row',

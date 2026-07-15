@@ -9,8 +9,23 @@ export interface AthleteProfile {
   primaryEvent: string | null;
   weaknessType: string | null;
   trainingDaysPerWeek: number | null;
+  nextRaceDate?: string | null;
+  weaknessDiagnosedAt?: string | null;
+  streakCount?: number;
+  longestStreak?: number;
+  onboardingCompleted?: boolean;
+  needsRediagnosis?: boolean;
   email?: string;
   role?: string;
+}
+
+export interface ProfileUpdate {
+  ageGroup?: string;
+  primaryEvent?: string;
+  events?: string[];
+  trainingDaysPerWeek?: number;
+  nextRaceDate?: string | null;
+  onboardingCompleted?: boolean;
 }
 
 export const profileApi = {
@@ -18,7 +33,7 @@ export const profileApi = {
     const { data } = await client.get<ApiResponse<AthleteProfile>>('/athletes/me');
     return data.data;
   },
-  updateMyProfile: async (updates: Partial<Pick<AthleteProfile, 'ageGroup' | 'primaryEvent' | 'trainingDaysPerWeek'>>): Promise<AthleteProfile> => {
+  updateMyProfile: async (updates: ProfileUpdate): Promise<AthleteProfile> => {
     const { data } = await client.patch<ApiResponse<AthleteProfile>>('/athletes/me', updates);
     return data.data;
   },

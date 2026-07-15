@@ -68,9 +68,11 @@ export interface Session {
   planId: string;
   completedAt: string;
   timesRecorded: PersonalBest[];
+  newBadges?: Achievement[];
 }
 
 export interface Diagnosis {
+  id: string;
   athleteId: string;
   weaknessType: 'acceleration' | 'top_speed' | 'speed_endurance';
   drillPrescription: Drill[];

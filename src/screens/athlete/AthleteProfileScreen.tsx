@@ -10,11 +10,16 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
 import { profileApi } from '@/api/training';
 import type { AthleteProfile } from '@/api/training';
+import type { AthleteStackParamList } from '@/navigation/types';
+
+type StackNavProp = NativeStackNavigationProp<AthleteStackParamList>;
 
 const COLORS = {
   primary: '#1A6BB5',
@@ -33,6 +38,7 @@ const AGE_GROUPS = ['U11', 'U13', 'U15', 'U17', 'U20'];
 const EVENTS = ['100m', '200m', '60m', '400m', '4×100m relay'];
 
 export default function AthleteProfileScreen() {
+  const navigation = useNavigation<StackNavProp>();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -234,6 +240,15 @@ export default function AthleteProfileScreen() {
             <Text style={styles.statValue}>{sessionCount}</Text>
             <Text style={styles.statLabel}>Sessions</Text>
           </View>
+        </View>
+
+        {/* Achievements + upgrade */}
+        <View style={styles.settingsCard}>
+          <SettingsRow icon="ribbon-outline" label="Achievements" onPress={() => navigation.navigate('Achievements')} />
+          <View style={styles.rowDivider} />
+          <SettingsRow icon="flash-outline" label="Upgrade to Premium" onPress={() => navigation.navigate('Paywall', undefined)} />
+          <View style={styles.rowDivider} />
+          <SettingsRow icon="medical-outline" label="Retake Diagnosis" onPress={() => navigation.navigate('DiagnosisQuiz')} />
         </View>
 
         {/* Settings */}
