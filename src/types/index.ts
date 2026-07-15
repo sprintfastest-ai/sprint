@@ -100,6 +100,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  isPaywallPrompt?: boolean;
 }
 
 export interface CoachNote {

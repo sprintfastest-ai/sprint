@@ -12,8 +12,18 @@ import {
 } from '@/db/queries/training';
 import { recordSessionCompletion, checkAndUnlockBadges, getAchievements as getAchievementsQuery } from '@/db/queries/athletes';
 import { generateWeeklyPlan, runDiagnosis } from '@/services/ai';
+import { isPremium } from '@/db/queries/subscriptions';
 import pool from '@/db/pool';
 import type { PersonalBest, WeaknessType } from '@/types';
+
+/** Monday-start ISO date (YYYY-MM-DD) of the week containing `date`. */
+function currentWeekStartDate(date = new Date()): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(d.setDate(diff));
+  return monday.toISOString().slice(0, 10);
+}
 
 export async function getWeeklyPlan(
   req: Request,
@@ -26,6 +36,19 @@ export async function getWeeklyPlan(
 
     // Only the athlete themselves or their coach/parent can fetch
     assertCanAccessAthlete(req, athleteId);
+
+    const userId = req.user?.userId;
+    const premium = userId ? await isPremium(userId) : false;
+
+    // Free tier: only the current week's plan is available — past/future
+    // weeks (planning ahead or reviewing history) require Premium.
+    if (!premium && req.user?.role === 'athlete' && weekStartDate !== currentWeekStartDate()) {
+      throw new AppError(
+        'Free plan includes this week only. Upgrade to Premium to plan ahead or review past weeks.',
+        ERROR_CODES.PREMIUM_REQUIRED,
+        402,
+      );
+    }
 
     let plan = await getPlanByAthleteAndWeek(athleteId, weekStartDate);
 
@@ -46,9 +69,10 @@ export async function getWeeklyPlan(
         throw new AppError('Athlete profile not found', ERROR_CODES.NOT_FOUND, 404);
       }
 
-      // Taper week: the athlete has a race within 7 days of this plan's week start.
+      // Taper week: the athlete has a race within 7 days of this plan's week
+      // start. Automatic taper is a Premium perk — free users train as normal.
       let isTaperWeek = false;
-      if (profile.next_race_date) {
+      if (premium && profile.next_race_date) {
         const daysUntilRace = Math.floor(
           (new Date(profile.next_race_date).getTime() - new Date(weekStartDate).getTime())
             / (24 * 60 * 60 * 1000),
@@ -153,6 +177,21 @@ export async function diagnose(
       };
 
     assertCanAccessAthlete(req, athleteId);
+
+    const userId = req.user?.userId;
+    if (userId && !(await isPremium(userId))) {
+      const { rows: countRows } = await pool.query<{ count: number }>(
+        'SELECT COUNT(*)::int AS count FROM diagnoses WHERE athlete_id = $1',
+        [athleteId],
+      );
+      if ((countRows[0]?.count ?? 0) >= 1) {
+        throw new AppError(
+          'Free plan includes one diagnosis. Upgrade to Premium to retake your weakness assessment.',
+          ERROR_CODES.PREMIUM_REQUIRED,
+          402,
+        );
+      }
+    }
 
     // Get most recent diagnosis for context
     const { rows: prev } = await pool.query(

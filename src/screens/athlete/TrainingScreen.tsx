@@ -59,12 +59,14 @@ export default function TrainingScreen() {
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPaywallError, setIsPaywallError] = useState(false);
 
   const loadPlan = useCallback(() => {
     const athleteId = user?.athleteId ?? user?.id;
     if (!athleteId) return;
     setLoading(true);
     setError(null);
+    setIsPaywallError(false);
     const weekStart = getWeekStartDate();
     trainingApi.getWeeklyPlan(athleteId, weekStart)
       .then((p) => {
@@ -79,9 +81,10 @@ export default function TrainingScreen() {
       })
       .catch((err) => {
         // Surface the real error so we can actually debug
-        const anyErr = err as { response?: { data?: { error?: string; message?: string } }; message?: string };
+        const anyErr = err as { response?: { data?: { error?: string; message?: string; code?: string } }; message?: string };
         const serverMsg = anyErr?.response?.data?.error ?? anyErr?.response?.data?.message;
         setError(serverMsg ?? anyErr?.message ?? 'Could not load training plan');
+        setIsPaywallError(anyErr?.response?.data?.code === 'PREMIUM_REQUIRED');
       })
       .finally(() => setLoading(false));
   }, [user]);
@@ -176,8 +179,11 @@ export default function TrainingScreen() {
         ) : error ? (
           <View style={styles.centered}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={loadPlan}>
-              <Text style={styles.retryBtnText}>Try Again</Text>
+            <TouchableOpacity
+              style={styles.retryBtn}
+              onPress={() => (isPaywallError ? navigation.navigate('Paywall', undefined) : loadPlan())}
+            >
+              <Text style={styles.retryBtnText}>{isPaywallError ? 'Upgrade to Premium' : 'Try Again'}</Text>
             </TouchableOpacity>
           </View>
         ) : todayDay ? (

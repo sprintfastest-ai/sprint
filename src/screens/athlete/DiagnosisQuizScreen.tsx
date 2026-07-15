@@ -48,6 +48,7 @@ export default function DiagnosisQuizScreen() {
   const [fade, setFade] = useState<typeof FADE_OPTIONS[number] | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPaywallError, setIsPaywallError] = useState(false);
 
   const totalSteps = 5;
 
@@ -73,6 +74,7 @@ export default function DiagnosisQuizScreen() {
     if (!athleteId) return;
     setSubmitting(true);
     setError(null);
+    setIsPaywallError(false);
     try {
       const diagnosis = await diagnosisApi.runDiagnosis({
         athleteId,
@@ -83,8 +85,9 @@ export default function DiagnosisQuizScreen() {
       });
       navigation.replace('DiagnosisResults', { diagnosis });
     } catch (err) {
-      const anyErr = err as { response?: { data?: { error?: string } }; message?: string };
+      const anyErr = err as { response?: { data?: { error?: string; code?: string } }; message?: string };
       setError(anyErr?.response?.data?.error ?? anyErr?.message ?? 'Could not run diagnosis. Please try again.');
+      setIsPaywallError(anyErr?.response?.data?.code === 'PREMIUM_REQUIRED');
     } finally {
       setSubmitting(false);
     }
@@ -177,13 +180,15 @@ export default function DiagnosisQuizScreen() {
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.nextBtn, (!canAdvance() || submitting) && styles.btnDisabled]}
-            onPress={handleNext}
-            disabled={!canAdvance() || submitting}
+            onPress={() => (isPaywallError ? navigation.navigate('Paywall', undefined) : handleNext())}
+            disabled={(!canAdvance() && !isPaywallError) || submitting}
           >
             {submitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.nextBtnText}>{step === 4 ? 'Get My Diagnosis' : step === 0 ? "Let's Go" : 'Next'}</Text>
+              <Text style={styles.nextBtnText}>
+                {isPaywallError ? 'Upgrade to Premium' : step === 4 ? 'Get My Diagnosis' : step === 0 ? "Let's Go" : 'Next'}
+              </Text>
             )}
           </TouchableOpacity>
         </View>

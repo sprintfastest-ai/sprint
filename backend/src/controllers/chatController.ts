@@ -4,6 +4,9 @@ import { AppError } from '@/middleware/errorHandler';
 import { ERROR_CODES } from '@/utils/constants';
 import pool from '@/db/pool';
 import { chatWithCoach } from '@/services/ai';
+import { isPremium } from '@/db/queries/subscriptions';
+
+const FREE_DAILY_CHAT_LIMIT = 15;
 
 async function resolveAthleteId(userId: string): Promise<string | null> {
   const { rows } = await pool.query(
@@ -66,6 +69,21 @@ export async function sendMessage(
 
     const athleteId = req.user?.athleteId ?? (await resolveAthleteId(userId));
     if (!athleteId) throw new AppError('Athlete profile not found', ERROR_CODES.NOT_FOUND, 404);
+
+    if (!(await isPremium(userId))) {
+      const { rows: countRows } = await pool.query<{ count: number }>(
+        `SELECT COUNT(*)::int AS count FROM chat_messages
+         WHERE athlete_id = $1 AND role = 'user' AND created_at >= CURRENT_DATE`,
+        [athleteId],
+      );
+      if ((countRows[0]?.count ?? 0) >= FREE_DAILY_CHAT_LIMIT) {
+        throw new AppError(
+          `You've reached today's free chat limit (${FREE_DAILY_CHAT_LIMIT} messages). Upgrade to Premium for unlimited AI coaching.`,
+          ERROR_CODES.PREMIUM_REQUIRED,
+          402,
+        );
+      }
+    }
 
     const { content } = req.body as { content: string };
 

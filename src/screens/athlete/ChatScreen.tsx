@@ -13,9 +13,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Markdown from 'react-native-markdown-display';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { chatApi } from '@/api/chat';
 import type { ChatMessage } from '@/types';
+import type { AthleteStackParamList } from '@/navigation/types';
+
+type StackNavProp = NativeStackNavigationProp<AthleteStackParamList>;
 
 const COLORS = {
   primary: '#1A6BB5',
@@ -45,7 +49,7 @@ const SEED_MESSAGES: ChatMessage[] = [
 ];
 
 export default function ChatScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavProp>();
   const user = useAuthStore((s) => s.user);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -82,22 +86,29 @@ export default function ChatScreen() {
     scrollToEnd();
 
     try {
-      // Retry once on transient failures (Gemini/Render hiccup)
       let reply: ChatMessage;
       try {
         reply = await chatApi.sendMessage(text);
-      } catch {
+      } catch (err) {
+        // Don't retry a limit/paywall error — retrying can't succeed
+        const anyErr = err as { response?: { data?: { code?: string } } };
+        if (anyErr?.response?.data?.code === 'PREMIUM_REQUIRED') throw err;
         await new Promise((r) => setTimeout(r, 1500));
         reply = await chatApi.sendMessage(text);
       }
       setMessages((prev) => [...prev, reply]);
-    } catch {
+    } catch (err) {
+      const anyErr = err as { response?: { data?: { error?: string; code?: string } } };
+      const isPaywall = anyErr?.response?.data?.code === 'PREMIUM_REQUIRED';
       const fallback: ChatMessage = {
         id: String(Date.now() + 1),
         userId: 'ai',
         role: 'assistant',
-        content: "⚠️ Couldn't reach the coach right now. Tap your message to resend.",
+        content: isPaywall
+          ? (anyErr.response?.data?.error ?? 'Upgrade to Premium for unlimited AI coaching.')
+          : "⚠️ Couldn't reach the coach right now. Tap your message to resend.",
         timestamp: new Date().toISOString(),
+        isPaywallPrompt: isPaywall,
       };
       setMessages((prev) => [...prev, fallback]);
     } finally {
@@ -110,8 +121,11 @@ export default function ChatScreen() {
     if (item.role === 'user') {
       return <UserBubble text={item.content} />;
     }
+    if (item.isPaywallPrompt) {
+      return <PaywallBubble text={item.content} onUpgrade={() => navigation.navigate('Paywall', undefined)} />;
+    }
     return <AIBubble text={item.content} />;
-  }, []);
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -204,6 +218,22 @@ function AIBubble({ text }: { text: string }) {
       </View>
       <View style={styles.aiBubble}>
         <Markdown style={markdownStyles}>{text}</Markdown>
+      </View>
+    </View>
+  );
+}
+
+function PaywallBubble({ text, onUpgrade }: { text: string; onUpgrade: () => void }) {
+  return (
+    <View style={styles.aiRow}>
+      <View style={styles.aiAvatar}>
+        <Ionicons name="flash" size={16} color="#fff" />
+      </View>
+      <View style={[styles.aiBubble, styles.paywallBubble]}>
+        <Text style={styles.paywallText}>{text}</Text>
+        <TouchableOpacity style={styles.paywallBtn} onPress={onUpgrade}>
+          <Text style={styles.paywallBtnText}>Upgrade to Premium</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -328,6 +358,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   aiBubbleText: { fontSize: 14, color: COLORS.text, lineHeight: 22 },
+  paywallBubble: { backgroundColor: '#FEF3EC', borderColor: '#F05A1A' },
+  paywallText: { fontSize: 14, color: COLORS.text, lineHeight: 20, marginBottom: 10 },
+  paywallBtn: {
+    backgroundColor: '#F05A1A', borderRadius: 10,
+    paddingVertical: 9, paddingHorizontal: 14, alignSelf: 'flex-start',
+  },
+  paywallBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   inputBar: {
     flexDirection: 'row',
