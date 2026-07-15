@@ -1,12 +1,22 @@
 import pool from '../pool';
 import type { TrainingPlan, Session, PersonalBest } from '@/types';
 
+const PLAN_COLUMNS = `
+  id,
+  athlete_id       AS "athleteId",
+  week_start_date  AS "weekStartDate",
+  days,
+  is_coach_override AS "isCoachOverride",
+  coach_id         AS "coachId",
+  created_at       AS "createdAt"
+`;
+
 export async function getPlanByAthleteAndWeek(
   athleteId: string,
   weekStartDate: string,
 ): Promise<TrainingPlan | null> {
   const { rows } = await pool.query<TrainingPlan>(
-    `SELECT * FROM training_plans
+    `SELECT ${PLAN_COLUMNS} FROM training_plans
      WHERE athlete_id = $1 AND week_start_date = $2
      ORDER BY created_at DESC
      LIMIT 1`,
@@ -20,7 +30,7 @@ export async function insertPlan(plan: Omit<TrainingPlan, 'id' | 'createdAt'>): 
     `INSERT INTO training_plans
        (athlete_id, week_start_date, days, is_coach_override, coach_id)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING *`,
+     RETURNING ${PLAN_COLUMNS}`,
     [plan.athleteId, plan.weekStartDate, JSON.stringify(plan.days), plan.isCoachOverride, plan.coachId ?? null],
   );
   return rows[0] as TrainingPlan;
