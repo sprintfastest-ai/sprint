@@ -31,7 +31,7 @@ export const trainingApi = {
   ): Promise<TrainingPlan> => {
     const { data } = await client.get<ApiResponse<TrainingPlan>>(
       `/athletes/${athleteId}/plans`,
-      { params: { weekStartDate } },
+      { params: { weekStartDate }, timeout: 120_000 },
     );
     return data.data;
   },

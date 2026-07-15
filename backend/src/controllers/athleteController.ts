@@ -48,10 +48,16 @@ export async function getWeeklyPlan(
         athleteId,
         profile.age_group,
         profile.weakness_type,
-        profile.training_days_per_week,
+        profile.training_days_per_week ?? 3,
         weekStartDate,
       );
-      plan = await insertPlan(generated);
+      // Trust server-known values for identity/flags; take only `days` from Gemini
+      plan = await insertPlan({
+        athleteId,
+        weekStartDate,
+        days: Array.isArray(generated?.days) ? generated.days : [],
+        isCoachOverride: false,
+      });
     }
 
     sendSuccess(res, plan);

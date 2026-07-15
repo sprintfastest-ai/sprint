@@ -60,12 +60,21 @@ export default function TrainingScreen() {
     const weekStart = getWeekStartDate();
     trainingApi.getWeeklyPlan(athleteId, weekStart)
       .then((p) => {
+        if (!p || !Array.isArray(p.days)) {
+          setError('Training plan response was malformed. Please try again.');
+          return;
+        }
         setPlan(p);
         const todayJS = new Date().getDay();
         const todayPlan = todayJS === 0 ? 6 : todayJS - 1;
         setSelectedDayIdx(Math.min(todayPlan, p.days.length - 1));
       })
-      .catch(() => setError('Could not load training plan'))
+      .catch((err) => {
+        // Surface the real error so we can actually debug
+        const anyErr = err as { response?: { data?: { error?: string; message?: string } }; message?: string };
+        const serverMsg = anyErr?.response?.data?.error ?? anyErr?.response?.data?.message;
+        setError(serverMsg ?? anyErr?.message ?? 'Could not load training plan');
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
