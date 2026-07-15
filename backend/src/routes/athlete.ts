@@ -12,6 +12,7 @@ import {
   getDiagnosisHistory,
   getMyProfile,
   updateMyProfile,
+  getAchievements,
 } from '@/controllers/athleteController';
 
 const router = Router();
@@ -23,7 +24,11 @@ router.patch(
   '/me',
   body('ageGroup').optional().isIn(['U11', 'U13', 'U15', 'U17', 'U20']).withMessage('Invalid age group'),
   body('primaryEvent').optional().isString().trim().isLength({ max: 50 }),
+  body('events').optional().isArray({ max: 10 }).withMessage('events must be an array'),
+  body('events.*').optional().isString().trim().isLength({ max: 30 }),
   body('trainingDaysPerWeek').optional().isInt({ min: 1, max: 7 }),
+  body('nextRaceDate').optional({ nullable: true }).isDate().withMessage('nextRaceDate must be YYYY-MM-DD'),
+  body('onboardingCompleted').optional().isBoolean(),
   validate,
   updateMyProfile,
 );
@@ -68,8 +73,11 @@ router.post(
   body('timeTrial20m').isFloat({ min: 1 }).withMessage('timeTrial20m must be a positive number'),
   body('timeTrial60m').isFloat({ min: 1 }).withMessage('timeTrial60m must be a positive number'),
   body('timeTrial200m').isFloat({ min: 1 }).withMessage('timeTrial200m must be a positive number'),
+  body('answers').optional().isObject().withMessage('answers must be an object'),
   validate,
   diagnose,
 );
+
+router.get('/:athleteId/achievements', athleteIdParam, validate, getAchievements);
 
 export default router;

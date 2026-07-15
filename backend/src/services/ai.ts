@@ -63,11 +63,13 @@ export async function generateWeeklyPlan(
   weaknessType: WeaknessType | null,
   trainingDaysPerWeek: number,
   weekStartDate: string,
+  isTaperWeek = false,
 ): Promise<Omit<TrainingPlan, 'id' | 'createdAt'>> {
   const prompt = `
 You are an expert sprint coach. Generate a ${trainingDaysPerWeek}-day sprint training plan for a ${ageGroup} athlete.
 ${weaknessType ? `Their primary weakness is: ${weaknessType}.` : ''}
 Week start date: ${weekStartDate}.
+${isTaperWeek ? `IMPORTANT: This is a RACE TAPER week — the athlete has a race within 7 days. Reduce total training volume by roughly 40-50% (fewer sets/reps, more rest), keep intensity high but sharp and short, prioritize technique and freshness over fatigue, and include race-specific starts/acceleration work. Avoid any high-volume or exhausting sessions.` : ''}
 
 Return ONLY valid JSON matching this exact structure (no markdown, no explanation):
 {

@@ -252,3 +252,104 @@ export async function getAchievements(athleteId: string): Promise<AchievementRow
   );
   return rows;
 }
+
+// ─── Streak recording ───────────────────────────────────────────────────────
+
+/**
+ * Records a completed session's date against the athlete's streak.
+ * - Same calendar day as last session: no-op (already counted today).
+ * - Exactly one day after last session: increments the streak.
+ * - Any other gap (or no prior session): streak resets to 1.
+ */
+export async function recordSessionCompletion(athleteId: string, sessionDate: Date): Promise<void> {
+  const profile = await findAthleteProfileById(athleteId);
+  if (!profile) return;
+
+  const toDayKey = (d: Date) => d.toISOString().slice(0, 10);
+  const sessionDay = toDayKey(sessionDate);
+  const lastDay = profile.last_session_date ? toDayKey(new Date(profile.last_session_date)) : null;
+
+  if (lastDay === sessionDay) return; // already logged today
+
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const isConsecutive = lastDay !== null
+    && new Date(sessionDay).getTime() - new Date(lastDay).getTime() === oneDayMs;
+
+  if (isConsecutive) {
+    await incrementStreak(athleteId, sessionDate);
+  } else {
+    await pool.query(
+      `UPDATE athlete_profiles
+       SET streak_count = 1, longest_streak = GREATEST(longest_streak, 1),
+           last_session_date = $2, updated_at = NOW()
+       WHERE id = $1`,
+      [athleteId, sessionDate],
+    );
+  }
+}
+
+// ─── Badge catalogue ─────────────────────────────────────────────────────────
+
+export interface BadgeDefinition {
+  type: string;
+  label: string;
+  description: string;
+  icon: string;
+  check: (stats: AthleteBadgeStats) => boolean;
+}
+
+export interface AthleteBadgeStats {
+  sessionCount: number;
+  streakCount: number;
+  longestStreak: number;
+  pbCount: number;
+}
+
+export const BADGE_DEFINITIONS: BadgeDefinition[] = [
+  { type: 'first_session',     label: 'First Steps',     description: 'Complete your first training session',   icon: 'footsteps', check: (s) => s.sessionCount >= 1 },
+  { type: 'streak_3',          label: 'On a Roll',        description: '3-day training streak',                  icon: 'flame',      check: (s) => s.streakCount >= 3 },
+  { type: 'streak_7',          label: 'Week Warrior',     description: '7-day training streak',                  icon: 'flame',      check: (s) => s.streakCount >= 7 },
+  { type: 'streak_14',         label: 'Unstoppable',      description: '14-day training streak',                 icon: 'flame',      check: (s) => s.streakCount >= 14 },
+  { type: 'streak_30',         label: 'Iron Will',        description: '30-day training streak',                 icon: 'flame',      check: (s) => s.streakCount >= 30 },
+  { type: 'sessions_10',       label: 'Committed',        description: 'Complete 10 training sessions',          icon: 'barbell',    check: (s) => s.sessionCount >= 10 },
+  { type: 'sessions_25',       label: 'Dedicated',        description: 'Complete 25 training sessions',          icon: 'barbell',    check: (s) => s.sessionCount >= 25 },
+  { type: 'sessions_50',       label: 'Veteran',          description: 'Complete 50 training sessions',          icon: 'barbell',    check: (s) => s.sessionCount >= 50 },
+  { type: 'sessions_100',      label: 'Centurion',        description: 'Complete 100 training sessions',         icon: 'medal',      check: (s) => s.sessionCount >= 100 },
+  { type: 'first_pb',          label: 'Personal Best',    description: 'Log your first personal best',           icon: 'trophy',     check: (s) => s.pbCount >= 1 },
+  { type: 'pb_collector_3',    label: 'PB Collector',     description: 'Log personal bests across 3 distances',  icon: 'trophy',     check: (s) => s.pbCount >= 3 },
+  { type: 'pb_collector_5',    label: 'Speed Demon',      description: 'Log personal bests across 5 distances',  icon: 'trophy',     check: (s) => s.pbCount >= 5 },
+  { type: 'longest_streak_21', label: 'Consistency King', description: 'Reach a 21-day best streak',             icon: 'ribbon',     check: (s) => s.longestStreak >= 21 },
+];
+
+/**
+ * Evaluates all badge definitions against the athlete's current stats and
+ * unlocks any newly-earned ones. Returns only the badges unlocked by *this*
+ * call (empty array if nothing new).
+ */
+export async function checkAndUnlockBadges(athleteId: string): Promise<AchievementRow[]> {
+  const [profile, sessionCountRes, pbRes, alreadyUnlocked] = await Promise.all([
+    findAthleteProfileById(athleteId),
+    pool.query<{ count: number }>('SELECT COUNT(*)::int AS count FROM sessions WHERE athlete_id = $1', [athleteId]),
+    pool.query<{ count: number }>(
+      'SELECT COUNT(DISTINCT distance_metres)::int AS count FROM personal_bests WHERE athlete_id = $1',
+      [athleteId],
+    ),
+    getAchievements(athleteId),
+  ]);
+
+  const stats: AthleteBadgeStats = {
+    sessionCount: sessionCountRes.rows[0]?.count ?? 0,
+    pbCount: pbRes.rows[0]?.count ?? 0,
+    streakCount: profile?.streak_count ?? 0,
+    longestStreak: profile?.longest_streak ?? 0,
+  };
+  const unlockedTypes = new Set(alreadyUnlocked.map((a: AchievementRow) => a.badge_type));
+
+  const newlyUnlocked: AchievementRow[] = [];
+  for (const badge of BADGE_DEFINITIONS) {
+    if (unlockedTypes.has(badge.type) || !badge.check(stats)) continue;
+    const row = await unlockAchievement(athleteId, badge.type);
+    if (row) newlyUnlocked.push(row);
+  }
+  return newlyUnlocked;
+}

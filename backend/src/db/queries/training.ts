@@ -7,6 +7,7 @@ const PLAN_COLUMNS = `
   week_start_date  AS "weekStartDate",
   days,
   is_coach_override AS "isCoachOverride",
+  is_taper_week    AS "isTaperWeek",
   coach_id         AS "coachId",
   created_at       AS "createdAt"
 `;
@@ -28,10 +29,17 @@ export async function getPlanByAthleteAndWeek(
 export async function insertPlan(plan: Omit<TrainingPlan, 'id' | 'createdAt'>): Promise<TrainingPlan> {
   const { rows } = await pool.query<TrainingPlan>(
     `INSERT INTO training_plans
-       (athlete_id, week_start_date, days, is_coach_override, coach_id)
-     VALUES ($1, $2, $3, $4, $5)
+       (athlete_id, week_start_date, days, is_coach_override, is_taper_week, coach_id)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING ${PLAN_COLUMNS}`,
-    [plan.athleteId, plan.weekStartDate, JSON.stringify(plan.days), plan.isCoachOverride, plan.coachId ?? null],
+    [
+      plan.athleteId,
+      plan.weekStartDate,
+      JSON.stringify(plan.days),
+      plan.isCoachOverride,
+      plan.isTaperWeek ?? false,
+      plan.coachId ?? null,
+    ],
   );
   return rows[0] as TrainingPlan;
 }

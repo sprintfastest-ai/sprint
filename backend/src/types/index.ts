@@ -57,6 +57,7 @@ export interface TrainingPlan {
   weekStartDate: string;
   days: TrainingDay[];
   isCoachOverride: boolean;
+  isTaperWeek?: boolean;
   coachId?: string;
   createdAt: Date;
 }

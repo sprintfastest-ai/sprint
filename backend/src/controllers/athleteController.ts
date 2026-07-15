@@ -10,6 +10,7 @@ import {
   upsertPersonalBest,
   insertPlan,
 } from '@/db/queries/training';
+import { recordSessionCompletion, checkAndUnlockBadges, getAchievements as getAchievementsQuery } from '@/db/queries/athletes';
 import { generateWeeklyPlan, runDiagnosis } from '@/services/ai';
 import pool from '@/db/pool';
 import type { PersonalBest, WeaknessType } from '@/types';
@@ -38,10 +39,21 @@ export async function getWeeklyPlan(
         age_group: string;
         weakness_type: WeaknessType | null;
         training_days_per_week: number;
+        next_race_date: string | null;
       } | undefined;
 
       if (!profile) {
         throw new AppError('Athlete profile not found', ERROR_CODES.NOT_FOUND, 404);
+      }
+
+      // Taper week: the athlete has a race within 7 days of this plan's week start.
+      let isTaperWeek = false;
+      if (profile.next_race_date) {
+        const daysUntilRace = Math.floor(
+          (new Date(profile.next_race_date).getTime() - new Date(weekStartDate).getTime())
+            / (24 * 60 * 60 * 1000),
+        );
+        isTaperWeek = daysUntilRace >= 0 && daysUntilRace <= 7;
       }
 
       const generated = await generateWeeklyPlan(
@@ -50,6 +62,7 @@ export async function getWeeklyPlan(
         profile.weakness_type,
         profile.training_days_per_week ?? 3,
         weekStartDate,
+        isTaperWeek,
       );
       // Trust server-known values for identity/flags; take only `days` from Gemini
       plan = await insertPlan({
@@ -57,6 +70,7 @@ export async function getWeeklyPlan(
         weekStartDate,
         days: Array.isArray(generated?.days) ? generated.days : [],
         isCoachOverride: false,
+        isTaperWeek,
       });
     }
 
@@ -85,7 +99,10 @@ export async function completeSession(
     // Upsert PBs concurrently
     await Promise.allSettled(timesRecorded.map((pb) => upsertPersonalBest(pb)));
 
-    sendSuccess(res, session, 201);
+    await recordSessionCompletion(athleteId, new Date());
+    const newBadges = await checkAndUnlockBadges(athleteId);
+
+    sendSuccess(res, { ...session, newBadges }, 201);
   } catch (err) {
     next(err);
   }
@@ -139,12 +156,13 @@ export async function diagnose(
 
     // Get most recent diagnosis for context
     const { rows: prev } = await pool.query(
-      `SELECT weakness_type FROM diagnoses
+      `SELECT weakness_type, id FROM diagnoses
        WHERE athlete_id = $1
-       ORDER BY diagnosed_at DESC LIMIT 1`,
+       ORDER BY created_at DESC LIMIT 1`,
       [athleteId],
     );
     const previousWeaknessType = (prev[0]?.weakness_type as WeaknessType) ?? undefined;
+    const previousDiagnosisId = (prev[0]?.id as string) ?? null;
 
     const result = await runDiagnosis(
       athleteId,
@@ -155,14 +173,25 @@ export async function diagnose(
     );
 
     const { rows } = await pool.query(
-      `INSERT INTO diagnoses (athlete_id, weakness_type, drill_prescription)
-       VALUES ($1, $2, $3) RETURNING *`,
-      [athleteId, result.weaknessType, JSON.stringify(result.drillPrescription)],
+      `INSERT INTO diagnoses (athlete_id, weakness_type, answers, drill_prescription, previous_diagnosis_id)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING
+         id, athlete_id AS "athleteId", weakness_type AS "weaknessType",
+         answers, drill_prescription AS "drillPrescription",
+         previous_diagnosis_id AS "previousDiagnosisId",
+         created_at AS "diagnosedAt"`,
+      [
+        athleteId,
+        result.weaknessType,
+        JSON.stringify((req.body as { answers?: object }).answers ?? {}),
+        JSON.stringify(result.drillPrescription),
+        previousDiagnosisId,
+      ],
     );
 
-    // Update athlete profile weakness type
+    // Update athlete profile weakness type + diagnosis timestamp
     await pool.query(
-      'UPDATE athlete_profiles SET weakness_type = $1 WHERE user_id = $2',
+      'UPDATE athlete_profiles SET weakness_type = $1, weakness_diagnosed_at = NOW() WHERE id = $2',
       [result.weaknessType, athleteId],
     );
 
@@ -181,7 +210,12 @@ export async function getDiagnosisHistory(
     const { athleteId } = req.params as { athleteId: string };
     assertCanAccessAthlete(req, athleteId);
     const { rows } = await pool.query(
-      'SELECT * FROM diagnoses WHERE athlete_id = $1 ORDER BY diagnosed_at DESC',
+      `SELECT
+         id, athlete_id AS "athleteId", weakness_type AS "weaknessType",
+         answers, drill_prescription AS "drillPrescription",
+         previous_diagnosis_id AS "previousDiagnosisId",
+         created_at AS "diagnosedAt"
+       FROM diagnoses WHERE athlete_id = $1 ORDER BY created_at DESC`,
       [athleteId],
     );
     sendSuccess(res, rows);
@@ -220,6 +254,9 @@ export async function getMyProfile(
     const { rows } = await pool.query(
       `SELECT ap.id AS "athleteId", ap.age_group AS "ageGroup", ap.primary_event AS "primaryEvent",
               ap.weakness_type AS "weaknessType", ap.training_days_per_week AS "trainingDaysPerWeek",
+              ap.next_race_date AS "nextRaceDate", ap.weakness_diagnosed_at AS "weaknessDiagnosedAt",
+              ap.streak_count AS "streakCount", ap.longest_streak AS "longestStreak",
+              ap.onboarding_completed AS "onboardingCompleted",
               u.email, u.role
        FROM athlete_profiles ap
        JOIN users u ON u.id = ap.user_id
@@ -227,7 +264,12 @@ export async function getMyProfile(
       [userId],
     );
     if (!rows.length) throw new AppError('Profile not found', ERROR_CODES.NOT_FOUND, 404);
-    sendSuccess(res, rows[0]);
+
+    const profile = rows[0] as { weaknessDiagnosedAt: string | null };
+    const needsRediagnosis = !profile.weaknessDiagnosedAt
+      || (Date.now() - new Date(profile.weaknessDiagnosedAt).getTime()) > 28 * 24 * 60 * 60 * 1000;
+
+    sendSuccess(res, { ...profile, needsRediagnosis });
   } catch (err) {
     next(err);
   }
@@ -242,18 +284,27 @@ export async function updateMyProfile(
     const userId = req.user?.userId;
     if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
-    const { ageGroup, primaryEvent, trainingDaysPerWeek } = req.body as {
+    const { ageGroup, primaryEvent, events, trainingDaysPerWeek, nextRaceDate, onboardingCompleted } = req.body as {
       ageGroup?: string;
       primaryEvent?: string;
+      events?: string[];
       trainingDaysPerWeek?: number;
+      nextRaceDate?: string | null;
+      onboardingCompleted?: boolean;
     };
+
+    // `events` (array, from onboarding) is stored joined into the single
+    // `primary_event` column, matching the existing profile-pill convention.
+    const primaryEventValue = events !== undefined ? events.join(',') : primaryEvent;
 
     const updates: string[] = [];
     const values: unknown[] = [];
     let idx = 1;
     if (ageGroup !== undefined) { updates.push(`age_group = $${idx++}`); values.push(ageGroup); }
-    if (primaryEvent !== undefined) { updates.push(`primary_event = $${idx++}`); values.push(primaryEvent); }
+    if (primaryEventValue !== undefined) { updates.push(`primary_event = $${idx++}`); values.push(primaryEventValue); }
     if (trainingDaysPerWeek !== undefined) { updates.push(`training_days_per_week = $${idx++}`); values.push(trainingDaysPerWeek); }
+    if (nextRaceDate !== undefined) { updates.push(`next_race_date = $${idx++}`); values.push(nextRaceDate); }
+    if (onboardingCompleted !== undefined) { updates.push(`onboarding_completed = $${idx++}`); values.push(onboardingCompleted); }
 
     if (!updates.length) throw new AppError('Nothing to update', ERROR_CODES.VALIDATION_ERROR, 400);
 
@@ -262,11 +313,34 @@ export async function updateMyProfile(
       `UPDATE athlete_profiles SET ${updates.join(', ')}
        WHERE user_id = $${idx}
        RETURNING id AS "athleteId", age_group AS "ageGroup", primary_event AS "primaryEvent",
-                 weakness_type AS "weaknessType", training_days_per_week AS "trainingDaysPerWeek"`,
+                 weakness_type AS "weaknessType", training_days_per_week AS "trainingDaysPerWeek",
+                 next_race_date AS "nextRaceDate", onboarding_completed AS "onboardingCompleted"`,
       values,
     );
     if (!rows.length) throw new AppError('Profile not found', ERROR_CODES.NOT_FOUND, 404);
     sendSuccess(res, rows[0]);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAchievements(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { athleteId } = req.params as { athleteId: string };
+    assertCanAccessAthlete(req, athleteId);
+    const rows = await getAchievementsQuery(athleteId);
+    const achievements = rows.map((r) => ({
+      id: r.id,
+      athleteId: r.athlete_id,
+      badgeType: r.badge_type,
+      metadata: r.metadata,
+      unlockedAt: r.unlocked_at,
+    }));
+    sendSuccess(res, achievements);
   } catch (err) {
     next(err);
   }
