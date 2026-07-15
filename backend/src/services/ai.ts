@@ -15,20 +15,32 @@ function getClient(): GoogleGenerativeAI {
 
 function getModel() {
   return getClient().getGenerativeModel({
-    model: process.env.GEMINI_MODEL ?? 'gemini-1.5-flash',
+    model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
   });
 }
 
 async function generateJson<T>(prompt: string): Promise<T> {
+  const model = getModel();
+  let text = '';
   try {
-    const model = getModel();
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    text = result.response.text();
+  } catch (err) {
+    logger.error('Gemini API error', {
+      error: (err as Error).message,
+      model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
+    });
+    throw new AppError('AI service unavailable', ERROR_CODES.AI_ERROR, 503);
+  }
+  try {
     const json = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     return JSON.parse(json) as T;
   } catch (err) {
-    logger.error('Gemini API error', { error: (err as Error).message });
-    throw new AppError('AI service unavailable', ERROR_CODES.AI_ERROR, 503);
+    logger.error('Gemini returned non-JSON', {
+      error: (err as Error).message,
+      preview: text.slice(0, 200),
+    });
+    throw new AppError('AI service returned invalid response', ERROR_CODES.AI_ERROR, 503);
   }
 }
 
