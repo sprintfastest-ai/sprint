@@ -19,6 +19,16 @@ function getModel() {
   });
 }
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')       // **bold** → bold
+    .replace(/(^|[\s(])\*(?!\s)([^*\n]+?)\*(?=[\s.,!?)]|$)/g, '$1$2')  // *italic* → italic
+    .replace(/(^|[\s(])_([^_\n]+?)_(?=[\s.,!?)]|$)/g, '$1$2')          // _italic_ → italic
+    .replace(/^\s*[*•]\s+/gm, '- ')        // bullet lines → dash
+    .replace(/^#{1,6}\s+/gm, '')           // # headings → strip
+    .replace(/`([^`]+)`/g, '$1');          // `code` → code
+}
+
 function extractJson(text: string): string {
   const stripped = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   const firstBrace = stripped.indexOf('{');
@@ -161,7 +171,12 @@ export async function chatWithCoach(
 ): Promise<string> {
   try {
     const model = getModel();
-    const systemText = `You are an expert sprint coach assistant for SprintFastest. Be concise, encouraging, and evidence-based. Only answer questions about sprint training, recovery, nutrition for sprinters, and race preparation.${athleteContext}`;
+    const systemText = `You are an expert sprint coach assistant for SprintFastest. Be concise, encouraging, and evidence-based. Only answer questions about sprint training, recovery, nutrition for sprinters, and race preparation.
+
+Format rules — reply in plain text ONLY:
+- No markdown: never use *, **, _, #, or backticks for formatting.
+- For lists, use plain dashes at the start of a line ("- item"), never bullets or asterisks.
+- Keep replies short: 2–4 short paragraphs max, or a short list.${athleteContext}`;
     const chat = model.startChat({
       history: [
         {
@@ -176,7 +191,7 @@ export async function chatWithCoach(
       ],
     });
     const result = await chat.sendMessage(message);
-    return result.response.text();
+    return stripMarkdown(result.response.text());
   } catch (err) {
     logger.error('Gemini chat error', { error: (err as Error).message });
     throw new AppError('AI service unavailable', ERROR_CODES.AI_ERROR, 503);
