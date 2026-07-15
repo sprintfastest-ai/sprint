@@ -164,17 +164,20 @@ export async function meHandler(
     // Strip sensitive fields
     const { password_hash: _ph, verification_token: _vt, reset_token: _rt, ...safeUser } = user;
 
-    // Attach athleteId for athlete users so the mobile app can use it directly
+    // Attach athleteId + onboarding status for athlete users so the mobile
+    // app can decide whether to route into the onboarding flow.
     let athleteId: string | undefined;
+    let onboardingCompleted: boolean | undefined;
     if (safeUser.role === 'athlete') {
-      const { rows } = await pool.query<{ id: string }>(
-        'SELECT id FROM athlete_profiles WHERE user_id = $1 LIMIT 1',
+      const { rows } = await pool.query<{ id: string; onboarding_completed: boolean }>(
+        'SELECT id, onboarding_completed FROM athlete_profiles WHERE user_id = $1 LIMIT 1',
         [userId],
       );
       athleteId = rows[0]?.id;
+      onboardingCompleted = rows[0]?.onboarding_completed;
     }
 
-    sendSuccess(res, { ...safeUser, athleteId });
+    sendSuccess(res, { ...safeUser, athleteId, onboardingCompleted });
   } catch (err) {
     next(err);
   }

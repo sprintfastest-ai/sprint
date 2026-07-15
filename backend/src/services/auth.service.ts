@@ -145,6 +145,7 @@ export async function register(
       isVerified: false,
       createdAt: createdUser!.created_at,
       athleteId: athleteProfileId,
+      onboardingCompleted: role === 'athlete' ? false : undefined,
     },
   };
 }
@@ -202,9 +203,11 @@ export async function login(
 
   // Resolve athleteId for token
   let athleteId: string | undefined;
+  let onboardingCompleted: boolean | undefined;
   if (user.role === 'athlete') {
     const profile = await findAthleteProfileByUserId(user.id);
     athleteId = profile?.id;
+    onboardingCompleted = profile?.onboarding_completed;
   }
 
   const accessToken = generateJWT({
@@ -229,6 +232,7 @@ export async function login(
       isVerified: user.is_verified,
       createdAt: user.created_at,
       athleteId,
+      onboardingCompleted,
     },
   };
 }

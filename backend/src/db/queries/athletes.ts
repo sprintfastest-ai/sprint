@@ -12,6 +12,7 @@ export interface AthleteProfileRow {
   streak_count: number;
   longest_streak: number;
   last_session_date: Date | null;
+  onboarding_completed: boolean;
   created_at: Date;
   updated_at: Date;
 }

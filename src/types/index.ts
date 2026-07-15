@@ -6,6 +6,7 @@ export interface User {
   athleteId?: string;
   subscriptionPlan?: 'free' | 'premium';
   isVerified?: boolean;
+  onboardingCompleted?: boolean;
 }
 
 export interface AthleteProfile {
