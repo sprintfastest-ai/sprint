@@ -19,8 +19,22 @@ function getModel() {
   });
 }
 
+function extractJson(text: string): string {
+  const stripped = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  const firstBrace = stripped.indexOf('{');
+  const lastBrace = stripped.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return stripped.slice(firstBrace, lastBrace + 1);
+  }
+  return stripped;
+}
+
 async function generateJson<T>(prompt: string): Promise<T> {
-  const model = getModel();
+  const client = getClient();
+  const model = client.getGenerativeModel({
+    model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
+    generationConfig: { responseMimeType: 'application/json' },
+  });
   let text = '';
   try {
     const result = await model.generateContent(prompt);
@@ -33,12 +47,11 @@ async function generateJson<T>(prompt: string): Promise<T> {
     throw new AppError('AI service unavailable', ERROR_CODES.AI_ERROR, 503);
   }
   try {
-    const json = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    return JSON.parse(json) as T;
+    return JSON.parse(extractJson(text)) as T;
   } catch (err) {
     logger.error('Gemini returned non-JSON', {
       error: (err as Error).message,
-      preview: text.slice(0, 200),
+      preview: text.slice(0, 500),
     });
     throw new AppError('AI service returned invalid response', ERROR_CODES.AI_ERROR, 503);
   }
