@@ -94,18 +94,38 @@ export async function getPersonalBestsByAthlete(athleteId: string): Promise<Pers
 }
 
 export async function upsertPersonalBest(pb: PersonalBest): Promise<PersonalBest> {
-  // Mark old PB as not current, then insert new one if it's faster
-  await pool.query(
-    `UPDATE personal_bests
-     SET is_current_pb = FALSE
-     WHERE athlete_id = $1 AND distance_metres = $2 AND time_seconds > $3`,
-    [pb.athleteId, pb.distance, pb.timeSeconds],
+  const { rows: existing } = await pool.query<{ time_seconds: string }>(
+    `SELECT time_seconds FROM personal_bests
+     WHERE athlete_id = $1 AND distance_metres = $2 AND is_current_pb = TRUE
+     LIMIT 1`,
+    [pb.athleteId, pb.distance],
   );
+  const isNewPb = existing.length === 0 || parseFloat(existing[0].time_seconds) > pb.timeSeconds;
 
+  if (!isNewPb) {
+    // Not an improvement — record the attempt but don't touch is_current_pb
+    const { rows } = await pool.query(
+      `INSERT INTO personal_bests (athlete_id, distance_metres, time_seconds, is_current_pb, recorded_at)
+       VALUES ($1, $2, $3, FALSE, NOW())
+       RETURNING
+         athlete_id   AS "athleteId",
+         distance_metres AS distance,
+         time_seconds AS "timeSeconds",
+         recorded_at  AS "recordedAt"`,
+      [pb.athleteId, pb.distance, pb.timeSeconds],
+    );
+    return rows[0] as PersonalBest;
+  }
+
+  // Genuine improvement — demote the old PB, insert the new one as current
+  await pool.query(
+    `UPDATE personal_bests SET is_current_pb = FALSE
+     WHERE athlete_id = $1 AND distance_metres = $2 AND is_current_pb = TRUE`,
+    [pb.athleteId, pb.distance],
+  );
   const { rows } = await pool.query(
     `INSERT INTO personal_bests (athlete_id, distance_metres, time_seconds, is_current_pb, recorded_at)
      VALUES ($1, $2, $3, TRUE, NOW())
-     ON CONFLICT DO NOTHING
      RETURNING
        athlete_id   AS "athleteId",
        distance_metres AS distance,
@@ -113,5 +133,5 @@ export async function upsertPersonalBest(pb: PersonalBest): Promise<PersonalBest
        recorded_at  AS "recordedAt"`,
     [pb.athleteId, pb.distance, pb.timeSeconds],
   );
-  return (rows[0] ?? pb) as PersonalBest;
+  return rows[0] as PersonalBest;
 }

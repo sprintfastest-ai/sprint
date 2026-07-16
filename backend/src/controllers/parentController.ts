@@ -16,9 +16,9 @@ export async function getLinkedAthletes(
     const { rows } = await pool.query(
       `SELECT u.id, u.email, ap.*
        FROM parent_profiles pp
-       JOIN LATERAL UNNEST(pp.linked_athlete_ids) AS lid(athlete_id) ON TRUE
-       JOIN users u ON u.id = lid.athlete_id
-       LEFT JOIN athlete_profiles ap ON ap.user_id = u.id
+       JOIN parent_athlete_links pal ON pal.parent_id = pp.id AND pal.status = 'active'
+       JOIN athlete_profiles ap ON ap.id = pal.athlete_id
+       JOIN users u ON u.id = ap.user_id
        WHERE pp.user_id = $1`,
       [parentId],
     );
@@ -39,7 +39,9 @@ export async function getAthleteProgress(
 
     // Verify the parent is linked to this athlete
     const { rows: link } = await pool.query(
-      `SELECT 1 FROM parent_profiles WHERE user_id = $1 AND $2 = ANY(linked_athlete_ids)`,
+      `SELECT 1 FROM parent_profiles pp
+       JOIN parent_athlete_links pal ON pal.parent_id = pp.id
+       WHERE pp.user_id = $1 AND pal.athlete_id = $2 AND pal.status = 'active'`,
       [parentId, athleteId],
     );
     if (!link.length) {
@@ -57,7 +59,7 @@ export async function getAthleteProgress(
         [athleteId],
       ),
       pool.query(
-        'SELECT * FROM diagnoses WHERE athlete_id = $1 ORDER BY diagnosed_at DESC LIMIT 5',
+        'SELECT * FROM diagnoses WHERE athlete_id = $1 ORDER BY created_at DESC LIMIT 5',
         [athleteId],
       ),
     ]);

@@ -121,8 +121,11 @@ export async function completeSession(
 
     const session = await insertSession(athleteId, planId, timesRecorded, dayNumber);
 
-    // Upsert PBs concurrently
-    await Promise.allSettled(timesRecorded.map((pb) => upsertPersonalBest(pb)));
+    // Force the URL's athleteId on every PB entry — never trust a client-
+    // supplied athleteId here, or a caller could write PBs onto another athlete.
+    await Promise.allSettled(
+      timesRecorded.map((pb) => upsertPersonalBest({ ...pb, athleteId })),
+    );
 
     await recordSessionCompletion(athleteId, new Date());
     const newBadges = await checkAndUnlockBadges(athleteId);

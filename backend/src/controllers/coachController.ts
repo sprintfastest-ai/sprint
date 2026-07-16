@@ -6,6 +6,30 @@ import pool from '@/db/pool';
 import { insertPlan } from '@/db/queries/training';
 import type { TrainingDay } from '@/types';
 
+/**
+ * `coachId` route params / JWT `userId` are `users.id` — every coach-owned
+ * table (coach_notes, training_plans.coach_id) stores `coach_profiles.id`
+ * instead. Resolve the profile id once and reuse it everywhere.
+ */
+async function resolveCoachProfileId(userId: string): Promise<string> {
+  const { rows } = await pool.query<{ id: string }>(
+    'SELECT id FROM coach_profiles WHERE user_id = $1 LIMIT 1',
+    [userId],
+  );
+  const id = rows[0]?.id;
+  if (!id) throw new AppError('Coach profile not found', ERROR_CODES.NOT_FOUND, 404);
+  return id;
+}
+
+async function assertCoachLinkedToAthlete(coachProfileId: string, athleteId: string): Promise<void> {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM coach_athlete_links
+     WHERE coach_id = $1 AND athlete_id = $2 AND status = 'active' LIMIT 1`,
+    [coachProfileId, athleteId],
+  );
+  if (!rows.length) throw new AppError('Not linked to this athlete', ERROR_CODES.FORBIDDEN, 403);
+}
+
 export async function getLinkedAthletes(
   req: Request,
   res: Response,
@@ -18,9 +42,9 @@ export async function getLinkedAthletes(
     const { rows } = await pool.query(
       `SELECT u.id, u.email, u.role, ap.*
        FROM coach_profiles cp
-       JOIN LATERAL UNNEST(cp.linked_athlete_ids) AS lid(athlete_id) ON TRUE
-       JOIN users u ON u.id = lid.athlete_id
-       LEFT JOIN athlete_profiles ap ON ap.user_id = u.id
+       JOIN coach_athlete_links cal ON cal.coach_id = cp.id AND cal.status = 'active'
+       JOIN athlete_profiles ap ON ap.id = cal.athlete_id
+       JOIN users u ON u.id = ap.user_id
        WHERE cp.user_id = $1`,
       [coachId],
     );
@@ -42,8 +66,11 @@ export async function overridePlan(
       days: TrainingDay[];
     };
 
-    const coachId = req.user?.userId;
-    if (!coachId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+
+    const coachId = await resolveCoachProfileId(userId);
+    await assertCoachLinkedToAthlete(coachId, athleteId);
 
     const plan = await insertPlan({
       athleteId,
@@ -70,8 +97,11 @@ export async function addNote(
       content: string;
       isVisibleToAthlete: boolean;
     };
-    const coachId = req.user?.userId;
-    if (!coachId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+
+    const coachId = await resolveCoachProfileId(userId);
+    await assertCoachLinkedToAthlete(coachId, athleteId);
 
     const { rows } = await pool.query(
       `INSERT INTO coach_notes (coach_id, athlete_id, content, is_visible_to_athlete)
@@ -90,11 +120,12 @@ export async function getNotes(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const { coachId, athleteId } = req.params as {
+    const { coachId: coachUserId, athleteId } = req.params as {
       coachId: string;
       athleteId: string;
     };
-    assertIsCoach(req, coachId);
+    assertIsCoach(req, coachUserId);
+    const coachId = await resolveCoachProfileId(coachUserId);
 
     const { rows } = await pool.query(
       `SELECT * FROM coach_notes
