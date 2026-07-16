@@ -14,8 +14,8 @@ Notifications.setNotificationHandler({
 export function useNotifications(
   onNotification?: (notification: Notifications.Notification) => void,
 ) {
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
+  const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
 
   useEffect(() => {
     notificationListener.current =
@@ -29,14 +29,11 @@ export function useNotifications(
       });
 
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(
-          notificationListener.current,
-        );
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
+      // Modern expo-notifications exposes .remove() directly on the
+      // subscription — the old Notifications.removeNotificationSubscription()
+      // static was removed and no longer exists on this API.
+      notificationListener.current?.remove();
+      responseListener.current?.remove();
     };
   }, [onNotification]);
 
