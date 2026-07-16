@@ -73,6 +73,7 @@ export interface Session {
   id: string;
   athleteId: string;
   planId: string;
+  dayNumber?: number;
   completedAt: string;
   timesRecorded: PersonalBest[];
 }

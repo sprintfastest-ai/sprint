@@ -55,10 +55,11 @@ export const trainingApi = {
     athleteId: string,
     planId: string,
     timesRecorded: PersonalBest[],
+    dayNumber?: number,
   ): Promise<Session> => {
     const { data } = await client.post<ApiResponse<Session>>(
       `/athletes/${athleteId}/sessions`,
-      { planId, timesRecorded },
+      { planId, timesRecorded, dayNumber },
     );
     return data.data;
   },

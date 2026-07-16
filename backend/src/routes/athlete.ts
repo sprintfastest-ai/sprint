@@ -48,6 +48,7 @@ router.post(
   athleteIdParam,
   body('planId').isUUID().withMessage('Valid planId required'),
   body('timesRecorded').isArray({ min: 0 }).withMessage('timesRecorded must be an array'),
+  body('dayNumber').optional().isInt({ min: 1, max: 7 }).withMessage('dayNumber must be between 1 and 7'),
   validate,
   completeSession,
 );

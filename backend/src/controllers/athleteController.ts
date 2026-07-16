@@ -113,12 +113,13 @@ export async function completeSession(
     const { athleteId } = req.params as { athleteId: string };
     assertCanAccessAthlete(req, athleteId);
 
-    const { planId, timesRecorded } = req.body as {
+    const { planId, timesRecorded, dayNumber } = req.body as {
       planId: string;
       timesRecorded: PersonalBest[];
+      dayNumber?: number;
     };
 
-    const session = await insertSession(athleteId, planId, timesRecorded);
+    const session = await insertSession(athleteId, planId, timesRecorded, dayNumber);
 
     // Upsert PBs concurrently
     await Promise.allSettled(timesRecorded.map((pb) => upsertPersonalBest(pb)));

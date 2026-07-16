@@ -48,6 +48,7 @@ const SESSION_COLUMNS = `
   id,
   athlete_id       AS "athleteId",
   plan_id          AS "planId",
+  day_number       AS "dayNumber",
   completed_at     AS "completedAt",
   drills_completed AS "timesRecorded"
 `;
@@ -64,14 +65,15 @@ export async function insertSession(
   athleteId: string,
   planId: string,
   timesRecorded: PersonalBest[],
+  dayNumber?: number,
 ): Promise<Session> {
   // `drills_completed` is the actual JSONB column on `sessions` — reused here
   // to store the times recorded for this session (no dedicated column exists).
   const { rows } = await pool.query<Session>(
-    `INSERT INTO sessions (athlete_id, plan_id, drills_completed)
-     VALUES ($1, $2, $3)
+    `INSERT INTO sessions (athlete_id, plan_id, day_number, drills_completed)
+     VALUES ($1, $2, $3, $4)
      RETURNING ${SESSION_COLUMNS}`,
-    [athleteId, planId, JSON.stringify(timesRecorded)],
+    [athleteId, planId, dayNumber ?? null, JSON.stringify(timesRecorded)],
   );
   return rows[0] as Session;
 }

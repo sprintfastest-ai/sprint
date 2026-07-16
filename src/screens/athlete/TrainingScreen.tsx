@@ -58,7 +58,6 @@ export default function TrainingScreen() {
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [completedDays, setCompletedDays] = useState<Set<number>>(new Set());
-  const completed = completedDays.has(selectedDayIdx);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPaywallError, setIsPaywallError] = useState(false);
@@ -77,10 +76,22 @@ export default function TrainingScreen() {
           return;
         }
         setPlan(p);
-        setCompletedDays(new Set());
         const todayJS = new Date().getDay();
         const todayPlan = todayJS === 0 ? 6 : todayJS - 1;
         setSelectedDayIdx(Math.min(todayPlan, p.days.length - 1));
+
+        // Derive which days are already complete from persisted session
+        // history, so the button state survives an app restart.
+        trainingApi.getSessionHistory(athleteId)
+          .then((sessions) => {
+            const daysDone = new Set(
+              sessions
+                .filter((s) => s.planId === p.id && s.dayNumber != null)
+                .map((s) => s.dayNumber as number),
+            );
+            setCompletedDays(daysDone);
+          })
+          .catch(() => setCompletedDays(new Set()));
       })
       .catch((err) => {
         // Surface the real error so we can actually debug
@@ -99,13 +110,16 @@ export default function TrainingScreen() {
     setExpanded((prev) => (prev === idx ? null : idx));
   }, []);
 
+  const todayDay: TrainingDay | undefined = plan?.days[selectedDayIdx];
+  const completed = todayDay ? completedDays.has(todayDay.dayNumber) : false;
+
   const handleComplete = useCallback(async () => {
-    if (!plan || !user) return;
+    if (!plan || !user || !todayDay) return;
     const athleteId = user.athleteId ?? user.id;
-    const dayIdx = selectedDayIdx;
-    setCompletedDays((prev) => new Set(prev).add(dayIdx));
+    const dayNumber = todayDay.dayNumber;
+    setCompletedDays((prev) => new Set(prev).add(dayNumber));
     try {
-      const session = await trainingApi.completeSession(athleteId, plan.id, []);
+      const session = await trainingApi.completeSession(athleteId, plan.id, [], dayNumber);
       if (session.newBadges?.length) {
         const names = session.newBadges.map((b) => getBadgeInfo(b.badgeType).label).join(', ');
         Alert.alert('New Badge Unlocked! 🎉', names, [
@@ -116,12 +130,10 @@ export default function TrainingScreen() {
     } catch {
       // best-effort — UI already reflects complete
     }
-  }, [plan, user, selectedDayIdx, navigation]);
+  }, [plan, user, todayDay, navigation]);
 
   const weekStart = plan ? new Date(plan.weekStartDate) : new Date();
   const weekLabel = weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-
-  const todayDay: TrainingDay | undefined = plan?.days[selectedDayIdx];
 
   const drillDetail = (drill: Drill) => {
     const parts: string[] = [];
