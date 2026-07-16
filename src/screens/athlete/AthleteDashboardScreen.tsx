@@ -14,7 +14,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
-import { getWeekStartDate } from '@/utils/formatters';
+import { getWeekStartDate, formatSessionType } from '@/utils/formatters';
 import { profileApi } from '@/api/training';
 import type { AthleteTabParamList, AthleteStackParamList } from '@/navigation/types';
 
@@ -151,7 +151,7 @@ export default function AthleteDashboardScreen() {
             <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 16 }} />
           ) : todayDay ? (
             <>
-              <Text style={styles.sessionTitle}>{todayDay.sessionType}</Text>
+              <Text style={styles.sessionTitle}>{formatSessionType(todayDay.sessionType)}</Text>
               <View style={styles.drillPills}>
                 {drillNames.map((name) => (
                   <View key={name} style={styles.drillPill}>

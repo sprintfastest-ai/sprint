@@ -18,6 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { trainingApi } from '@/api/training';
 import { getBadgeInfo } from '@/utils/badges';
+import { formatSessionType } from '@/utils/formatters';
 import type { TrainingPlan, TrainingDay, Drill } from '@/types';
 import type { AthleteStackParamList } from '@/navigation/types';
 
@@ -56,7 +57,8 @@ export default function TrainingScreen() {
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const [expanded, setExpanded] = useState<number | null>(null);
-  const [completed, setCompleted] = useState(false);
+  const [completedDays, setCompletedDays] = useState<Set<number>>(new Set());
+  const completed = completedDays.has(selectedDayIdx);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPaywallError, setIsPaywallError] = useState(false);
@@ -75,6 +77,7 @@ export default function TrainingScreen() {
           return;
         }
         setPlan(p);
+        setCompletedDays(new Set());
         const todayJS = new Date().getDay();
         const todayPlan = todayJS === 0 ? 6 : todayJS - 1;
         setSelectedDayIdx(Math.min(todayPlan, p.days.length - 1));
@@ -99,7 +102,8 @@ export default function TrainingScreen() {
   const handleComplete = useCallback(async () => {
     if (!plan || !user) return;
     const athleteId = user.athleteId ?? user.id;
-    setCompleted(true);
+    const dayIdx = selectedDayIdx;
+    setCompletedDays((prev) => new Set(prev).add(dayIdx));
     try {
       const session = await trainingApi.completeSession(athleteId, plan.id, []);
       if (session.newBadges?.length) {
@@ -112,7 +116,7 @@ export default function TrainingScreen() {
     } catch {
       // best-effort — UI already reflects complete
     }
-  }, [plan, user, navigation]);
+  }, [plan, user, selectedDayIdx, navigation]);
 
   const weekStart = plan ? new Date(plan.weekStartDate) : new Date();
   const weekLabel = weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -190,7 +194,7 @@ export default function TrainingScreen() {
           <View style={styles.sessionCard}>
             <View style={styles.cardHeader}>
               <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>{todayDay.sessionType}</Text>
+                <Text style={styles.cardTitle}>{formatSessionType(todayDay.sessionType)}</Text>
                 <View style={styles.durationPill}>
                   <Text style={styles.durationPillText}>{todayDay.drills.length} drills</Text>
                 </View>

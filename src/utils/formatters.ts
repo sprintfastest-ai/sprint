@@ -24,3 +24,14 @@ export function getWeekStartDate(date: Date = new Date()): string {
 export function formatDistance(meters: number): string {
   return `${meters}m`;
 }
+
+/** "acceleration_focus" / "acceleration-focus" -> "Acceleration Focus" */
+export function formatSessionType(sessionType: string): string {
+  if (!sessionType) return '';
+  return sessionType
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
