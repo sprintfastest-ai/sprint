@@ -1,16 +1,15 @@
 # SprintFastest Privacy Policy
 
-**Last updated:** [INSERT DATE]
+**Last updated:** 16 July 2026
 
 > ⚠️ **Not legal advice.** This draft was written to accurately describe what
 > the SprintFastest app and backend actually do, based on the real codebase.
 > Because SprintFastest knowingly collects data from children under 13 (our
 > U11 age-group tier), this policy touches COPPA (US), UK GDPR/Data
 > Protection Act 2018, and EU GDPR children's-data provisions. **Have a
-> lawyer review this before publishing** — the placeholders below
-> (`[INSERT ...]`) must be filled in with your actual company details, and a
-> lawyer should confirm the children's-privacy sections meet your specific
-> obligations in every region you operate in.
+> lawyer review this before publishing** — company details below are filled
+> in, but a lawyer should still confirm the children's-privacy sections meet
+> your specific obligations in every region you operate in.
 
 ---
 
@@ -21,10 +20,10 @@ mobile application and related services (the "**Service**"), which help
 youth track & field athletes plan training, track performance, and receive
 AI-generated coaching guidance.
 
-- **Company name:** [INSERT LEGAL ENTITY NAME]
-- **Registered address:** [INSERT ADDRESS]
-- **Contact for privacy questions:** [INSERT EMAIL, e.g. privacy@sprintfastest.com]
-- **Data Protection Officer (if applicable):** [INSERT NAME/CONTACT OR "N/A"]
+- **Company name:** Jutacos Limited
+- **Registered address:** 49 Stephens Croft, Falkirk, Scotland, FK2 7GU
+- **Contact for privacy questions:** sprint@sprintfastest.com
+- **Data Protection Officer (if applicable):** N/A
 
 This policy applies to the SprintFastest mobile app (iOS and Android) and
 the sprintfastest.com website.
@@ -188,7 +187,7 @@ remains active, so that your training history, personal bests, and
 achievements remain available to you.
 
 If you delete your account, we will delete or anonymise your personal
-data within [INSERT PERIOD, e.g. 30 days], except where we are required to
+data within 30 days, except where we are required to
 retain certain records for legal, tax, or fraud-prevention purposes, or
 where data has been aggregated such that it no longer identifies you.
 
@@ -215,14 +214,14 @@ children under 13 (our "U11" age group).
   and particularly not to children.
 - A parent or guardian who has linked an athlete's account can review the
   data associated with that account and request its deletion at any time
-  by contacting us at [INSERT PRIVACY CONTACT EMAIL].
+  by contacting us at sprint@sprintfastest.com.
 - If we learn that we have collected personal information from a child
   under 13 without the verifiable parental consent described above, we will
   take steps to delete that information promptly.
 
 Parents: if you believe your child has provided us with information
 without your consent, please contact us immediately at
-[INSERT PRIVACY CONTACT EMAIL].
+sprint@sprintfastest.com.
 
 ---
 
@@ -239,7 +238,7 @@ Depending on where you live, you may have the right to:
   (this will not affect processing that occurred before withdrawal)
 
 To exercise any of these rights, contact us at
-[INSERT PRIVACY CONTACT EMAIL]. We will respond within the timeframe
+sprint@sprintfastest.com. We will respond within the timeframe
 required by applicable law (e.g. one month under UK/EU GDPR).
 
 You also have the right to lodge a complaint with your local data
@@ -273,7 +272,7 @@ practices appropriate to the sensitivity of the data involved.
   for the Service to function. Any optional marketing communications will
   include an unsubscribe option.
 - **Account deletion:** you can request account deletion at any time by
-  contacting [INSERT PRIVACY CONTACT EMAIL].
+  contacting sprint@sprintfastest.com.
 
 ---
 
@@ -291,6 +290,6 @@ recent revision.
 If you have any questions about this Privacy Policy or how we handle your
 data, contact us at:
 
-**[INSERT COMPANY NAME]**
-[INSERT ADDRESS]
-[INSERT PRIVACY CONTACT EMAIL]
+**Jutacos Limited**
+49 Stephens Croft, Falkirk, Scotland, FK2 7GU
+sprint@sprintfastest.com
