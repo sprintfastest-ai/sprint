@@ -13,6 +13,7 @@ import {
   getMyProfile,
   updateMyProfile,
   getAchievements,
+  createInvite,
 } from '@/controllers/athleteController';
 
 const router = Router();
@@ -80,5 +81,13 @@ router.post(
 );
 
 router.get('/:athleteId/achievements', athleteIdParam, validate, getAchievements);
+
+router.post(
+  '/:athleteId/invites',
+  athleteIdParam,
+  body('relationship').isIn(['parent', 'coach']).withMessage('relationship must be parent or coach'),
+  validate,
+  createInvite,
+);
 
 export default router;

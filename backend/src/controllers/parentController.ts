@@ -3,6 +3,7 @@ import { sendSuccess } from '@/utils/response';
 import { AppError } from '@/middleware/errorHandler';
 import { ERROR_CODES } from '@/utils/constants';
 import pool from '@/db/pool';
+import { getLinkedAthletes as getLinkedAthletesQuery } from '@/db/queries/parents';
 
 export async function getLinkedAthletes(
   req: Request,
@@ -10,19 +11,31 @@ export async function getLinkedAthletes(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const parentId = req.user?.userId;
-    if (!parentId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
-    const { rows } = await pool.query(
-      `SELECT u.id, u.email, ap.*
-       FROM parent_profiles pp
-       JOIN parent_athlete_links pal ON pal.parent_id = pp.id AND pal.status = 'active'
-       JOIN athlete_profiles ap ON ap.id = pal.athlete_id
-       JOIN users u ON u.id = ap.user_id
-       WHERE pp.user_id = $1`,
-      [parentId],
+    const { rows: parentRows } = await pool.query<{ id: string }>(
+      'SELECT id FROM parent_profiles WHERE user_id = $1 LIMIT 1',
+      [userId],
     );
-    sendSuccess(res, rows);
+    const parentId = parentRows[0]?.id;
+    if (!parentId) {
+      sendSuccess(res, []);
+      return;
+    }
+
+    const rows = await getLinkedAthletesQuery(parentId);
+    const athletes = rows.map((r) => ({
+      athleteId: r.athlete_profile_id,
+      userId: r.user_id,
+      email: r.email,
+      ageGroup: r.age_group,
+      primaryEvent: r.primary_event,
+      streakCount: r.streak_count,
+      lastSessionDate: r.last_session_date,
+      nextRaceDate: r.next_race_date,
+    }));
+    sendSuccess(res, athletes);
   } catch (err) {
     next(err);
   }
@@ -34,7 +47,7 @@ export async function getAthleteProgress(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const parentId = req.user?.userId;
+    const parentUserId = req.user?.userId;
     const { athleteId } = req.params as { athleteId: string };
 
     // Verify the parent is linked to this athlete
@@ -42,7 +55,7 @@ export async function getAthleteProgress(
       `SELECT 1 FROM parent_profiles pp
        JOIN parent_athlete_links pal ON pal.parent_id = pp.id
        WHERE pp.user_id = $1 AND pal.athlete_id = $2 AND pal.status = 'active'`,
-      [parentId, athleteId],
+      [parentUserId, athleteId],
     );
     if (!link.length) {
       throw new AppError('Forbidden', ERROR_CODES.FORBIDDEN, 403);
@@ -50,7 +63,10 @@ export async function getAthleteProgress(
 
     const [sessions, pbs, diagnoses] = await Promise.all([
       pool.query(
-        'SELECT * FROM sessions WHERE athlete_id = $1 ORDER BY completed_at DESC LIMIT 20',
+        `SELECT id, athlete_id AS "athleteId", plan_id AS "planId",
+                day_number AS "dayNumber", completed_at AS "completedAt",
+                drills_completed AS "timesRecorded"
+         FROM sessions WHERE athlete_id = $1 ORDER BY completed_at DESC LIMIT 20`,
         [athleteId],
       ),
       pool.query(
@@ -59,7 +75,9 @@ export async function getAthleteProgress(
         [athleteId],
       ),
       pool.query(
-        'SELECT * FROM diagnoses WHERE athlete_id = $1 ORDER BY created_at DESC LIMIT 5',
+        `SELECT id, athlete_id AS "athleteId", weakness_type AS "weaknessType",
+                drill_prescription AS "drillPrescription", created_at AS "diagnosedAt"
+         FROM diagnoses WHERE athlete_id = $1 ORDER BY created_at DESC LIMIT 5`,
         [athleteId],
       ),
     ]);

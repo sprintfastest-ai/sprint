@@ -11,6 +11,7 @@ import {
   consumeResetToken,
   deleteAllRefreshTokensForUser,
 } from '@/db/queries/users';
+import { createLinkInvite } from '@/db/queries/links';
 import {
   findAthleteProfileByUserId,
 } from '@/db/queries/athletes';
@@ -42,7 +43,7 @@ export async function register(
   password: string,
   role: UserRole,
   profileData: RegisterProfileData = {},
-): Promise<{ accessToken: string; refreshToken: string; user: object }> {
+): Promise<{ accessToken: string; refreshToken: string; user: object; parentLinkCode?: string }> {
   const normalisedEmail = email.toLowerCase().trim();
 
   // Duplicate check before opening a transaction
@@ -118,9 +119,15 @@ export async function register(
     }),
   );
 
-  // 5. Under-13 flow: send parent consent request (no link code yet — that's created on demand)
-  if (isUnder13Athlete) {
-    logger.info('Under-13 athlete registered — parent consent required', {
+  // 5. Under-13 flow: generate a parent-link code immediately. A U11 athlete
+  // can't log back in until a parent redeems this code (see login() below),
+  // and they have no other authenticated way to request one — so it must be
+  // handed back right here, in the registration response itself.
+  let parentLinkCode: string | undefined;
+  if (isUnder13Athlete && athleteProfileId) {
+    const invite = await createLinkInvite(athleteProfileId, 'parent');
+    parentLinkCode = invite.code;
+    logger.info('Under-13 athlete registered — parent link code generated', {
       userId: createdUser!.id,
     });
   }
@@ -147,6 +154,7 @@ export async function register(
       athleteId: athleteProfileId,
       onboardingCompleted: role === 'athlete' ? false : undefined,
     },
+    parentLinkCode,
   };
 }
 

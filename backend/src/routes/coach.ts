@@ -8,11 +8,22 @@ import {
   overridePlan,
   addNote,
   getNotes,
+  getMyCoachProfile,
+  updateMyCoachProfile,
 } from '@/controllers/coachController';
 
 const router = Router();
 
 router.use(authenticate, requireRole('coach', 'admin'));
+
+router.get('/me', getMyCoachProfile);
+router.patch(
+  '/me',
+  body('clubName').optional().isString().trim().isLength({ max: 100 }),
+  body('bio').optional().isString().trim().isLength({ max: 500 }),
+  validate,
+  updateMyCoachProfile,
+);
 
 router.get('/:coachId/athletes', param('coachId').isUUID(), validate, getLinkedAthletes);
 

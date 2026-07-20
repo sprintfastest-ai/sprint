@@ -13,6 +13,7 @@ import {
 import { recordSessionCompletion, checkAndUnlockBadges, getAchievements as getAchievementsQuery } from '@/db/queries/athletes';
 import { generateWeeklyPlan, runDiagnosis } from '@/services/ai';
 import { isPremium } from '@/db/queries/subscriptions';
+import { createLinkInvite } from '@/db/queries/links';
 import pool from '@/db/pool';
 import type { PersonalBest, WeaknessType } from '@/types';
 
@@ -384,6 +385,31 @@ export async function getAchievements(
       unlockedAt: r.unlocked_at,
     }));
     sendSuccess(res, achievements);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createInvite(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { athleteId } = req.params as { athleteId: string };
+    const { relationship } = req.body as { relationship: 'parent' | 'coach' };
+
+    // Only the athlete themselves (or an admin) can invite a parent/coach —
+    // deliberately narrower than assertCanAccessAthlete, which also allows
+    // any already-linked coach/parent (not appropriate for minting new invites).
+    const { role, userId: sub, athleteId: tokenAthleteId } = req.user ?? {};
+    const isSelf = role === 'athlete' && (tokenAthleteId === athleteId || sub === athleteId);
+    if (role !== 'admin' && !isSelf) {
+      throw new AppError('Forbidden', ERROR_CODES.FORBIDDEN, 403);
+    }
+
+    const invite = await createLinkInvite(athleteId, relationship);
+    sendSuccess(res, { code: invite.code, expiresAt: invite.expires_at, relationship }, 201);
   } catch (err) {
     next(err);
   }

@@ -4,6 +4,13 @@ import { AppError } from '@/middleware/errorHandler';
 import { ERROR_CODES } from '@/utils/constants';
 import pool from '@/db/pool';
 import { insertPlan } from '@/db/queries/training';
+import {
+  getLinkedAthletes as getLinkedAthletesQuery,
+  createCoachNote,
+  getNotesByCoachAndAthlete,
+  updateCoachProfile as updateCoachProfileQuery,
+  findCoachProfileByUserId,
+} from '@/db/queries/coaches';
 import type { TrainingDay } from '@/types';
 
 /**
@@ -30,6 +37,46 @@ async function assertCoachLinkedToAthlete(coachProfileId: string, athleteId: str
   if (!rows.length) throw new AppError('Not linked to this athlete', ERROR_CODES.FORBIDDEN, 403);
 }
 
+export async function getMyCoachProfile(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+    const profile = await findCoachProfileByUserId(userId);
+    if (!profile) throw new AppError('Coach profile not found', ERROR_CODES.NOT_FOUND, 404);
+    sendSuccess(res, {
+      coachId: profile.id,
+      clubName: profile.club_name,
+      bio: profile.bio,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateMyCoachProfile(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+    const coachId = await resolveCoachProfileId(userId);
+    const { clubName, bio } = req.body as { clubName?: string; bio?: string };
+    const updated = await updateCoachProfileQuery(coachId, {
+      ...(clubName !== undefined ? { club_name: clubName } : {}),
+      ...(bio !== undefined ? { bio } : {}),
+    });
+    sendSuccess(res, { coachId: updated?.id, clubName: updated?.club_name, bio: updated?.bio });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getLinkedAthletes(
   req: Request,
   res: Response,
@@ -39,16 +86,18 @@ export async function getLinkedAthletes(
     const { coachId } = req.params as { coachId: string };
     assertIsCoach(req, coachId);
 
-    const { rows } = await pool.query(
-      `SELECT u.id, u.email, u.role, ap.*
-       FROM coach_profiles cp
-       JOIN coach_athlete_links cal ON cal.coach_id = cp.id AND cal.status = 'active'
-       JOIN athlete_profiles ap ON ap.id = cal.athlete_id
-       JOIN users u ON u.id = ap.user_id
-       WHERE cp.user_id = $1`,
-      [coachId],
-    );
-    sendSuccess(res, rows);
+    const coachProfileId = await resolveCoachProfileId(coachId);
+    const rows = await getLinkedAthletesQuery(coachProfileId);
+    const athletes = rows.map((r) => ({
+      athleteId: r.athlete_profile_id,
+      userId: r.user_id,
+      email: r.email,
+      ageGroup: r.age_group,
+      primaryEvent: r.primary_event,
+      weaknessType: r.weakness_type,
+      streakCount: r.streak_count,
+    }));
+    sendSuccess(res, athletes);
   } catch (err) {
     next(err);
   }
@@ -103,12 +152,14 @@ export async function addNote(
     const coachId = await resolveCoachProfileId(userId);
     await assertCoachLinkedToAthlete(coachId, athleteId);
 
-    const { rows } = await pool.query(
-      `INSERT INTO coach_notes (coach_id, athlete_id, content, is_visible_to_athlete)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [coachId, athleteId, content, isVisibleToAthlete],
-    );
-    sendSuccess(res, rows[0], 201);
+    const note = await createCoachNote(coachId, athleteId, content, isVisibleToAthlete);
+    sendSuccess(res, {
+      id: note.id,
+      athleteId: note.athlete_id,
+      content: note.content,
+      isVisibleToAthlete: note.is_visible_to_athlete,
+      createdAt: note.created_at,
+    }, 201);
   } catch (err) {
     next(err);
   }
@@ -127,13 +178,15 @@ export async function getNotes(
     assertIsCoach(req, coachUserId);
     const coachId = await resolveCoachProfileId(coachUserId);
 
-    const { rows } = await pool.query(
-      `SELECT * FROM coach_notes
-       WHERE coach_id = $1 AND athlete_id = $2
-       ORDER BY created_at DESC`,
-      [coachId, athleteId],
-    );
-    sendSuccess(res, rows);
+    const rows = await getNotesByCoachAndAthlete(coachId, athleteId);
+    const notes = rows.map((n) => ({
+      id: n.id,
+      athleteId: n.athlete_id,
+      content: n.content,
+      isVisibleToAthlete: n.is_visible_to_athlete,
+      createdAt: n.created_at,
+    }));
+    sendSuccess(res, notes);
   } catch (err) {
     next(err);
   }
