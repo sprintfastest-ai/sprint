@@ -1,35 +1,67 @@
 import client from './client';
-import type { CoachNote, TrainingPlan } from '@/types';
+import type { TrainingDay } from '@/types';
+
+type ApiResponse<T> = { data: T };
+
+export interface CoachProfile {
+  coachId: string;
+  clubName: string | null;
+  bio: string | null;
+}
+
+export interface CoachLinkedAthlete {
+  athleteId: string;
+  userId: string;
+  email: string;
+  ageGroup: string | null;
+  primaryEvent: string | null;
+  weaknessType: string | null;
+  streakCount: number;
+}
+
+export interface CoachNote {
+  id: string;
+  athleteId: string;
+  content: string;
+  isVisibleToAthlete: boolean;
+  createdAt: string;
+}
 
 export const coachApi = {
-  getLinkedAthletes: async (coachId: string) => {
-    const { data } = await client.get(`/coaches/${coachId}/athletes`);
-    return data;
+  getMyProfile: async (): Promise<CoachProfile> => {
+    const { data } = await client.get<ApiResponse<CoachProfile>>('/coaches/me');
+    return data.data;
   },
 
-  overridePlan: async (
-    athleteId: string,
-    plan: Partial<TrainingPlan>,
-  ): Promise<TrainingPlan> => {
-    const { data } = await client.put<TrainingPlan>(
-      `/athletes/${athleteId}/plans/override`,
-      plan,
-    );
-    return data;
+  updateMyProfile: async (updates: { clubName?: string; bio?: string }): Promise<CoachProfile> => {
+    const { data } = await client.patch<ApiResponse<CoachProfile>>('/coaches/me', updates);
+    return data.data;
   },
 
-  addNote: async (note: Omit<CoachNote, 'createdAt'>): Promise<CoachNote> => {
-    const { data } = await client.post<CoachNote>('/coach/notes', note);
-    return data;
+  getLinkedAthletes: async (coachUserId: string): Promise<CoachLinkedAthlete[]> => {
+    const { data } = await client.get<ApiResponse<CoachLinkedAthlete[]>>(`/coaches/${coachUserId}/athletes`);
+    return data.data;
   },
 
-  getNotes: async (
-    coachId: string,
-    athleteId: string,
-  ): Promise<CoachNote[]> => {
-    const { data } = await client.get<CoachNote[]>(
-      `/coaches/${coachId}/athletes/${athleteId}/notes`,
-    );
+  getNotes: async (coachUserId: string, athleteId: string): Promise<CoachNote[]> => {
+    const { data } = await client.get<ApiResponse<CoachNote[]>>(`/coaches/${coachUserId}/athletes/${athleteId}/notes`);
+    return data.data;
+  },
+
+  addNote: async (athleteId: string, content: string, isVisibleToAthlete: boolean): Promise<CoachNote> => {
+    const { data } = await client.post<ApiResponse<CoachNote>>('/coaches/notes', {
+      athleteId,
+      content,
+      isVisibleToAthlete,
+    });
+    return data.data;
+  },
+
+  overridePlan: async (athleteId: string, weekStartDate: string, days: TrainingDay[]) => {
+    const { data } = await client.put(`/coaches/athletes/${athleteId}/plans/override`, {
+      weekStartDate,
+      days,
+    });
     return data;
   },
 };

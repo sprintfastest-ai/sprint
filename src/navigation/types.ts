@@ -37,15 +37,24 @@ export type AthleteStackParamList = {
 
 export type CoachTabParamList = {
   Athletes: undefined;
-  Plans: undefined;
-  Notes: undefined;
   Profile: undefined;
+};
+
+/** Screens pushed above the coach bottom-tab navigator. */
+export type CoachStackParamList = {
+  Tabs: undefined;
+  AthleteDetail: { athleteId: string; email: string };
 };
 
 export type ParentTabParamList = {
   Overview: undefined;
-  Progress: undefined;
   Profile: undefined;
+};
+
+/** Screens pushed above the parent bottom-tab navigator. */
+export type ParentStackParamList = {
+  Tabs: undefined;
+  AthleteDetail: { athleteId: string; email: string };
 };
 
 export type RootStackNavigationProp = NativeStackNavigationProp<RootStackParamList>;

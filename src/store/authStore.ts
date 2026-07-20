@@ -29,10 +29,13 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  /** Set right after a U11 athlete registers — the code to give their parent. */
+  parentLinkCode: string | null;
 
   login: (email: string, password: string) => Promise<void>;
   register: (data: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
+  clearParentLinkCode: () => void;
   /**
    * Called on app startup — reads tokens from AsyncStorage, calls /auth/me
    * to validate. The axios interceptor transparently refreshes the access
@@ -50,6 +53,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  parentLinkCode: null,
 
   login: async (email, password) => {
     set({ isLoading: true, error: null });
@@ -74,12 +78,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (data: RegisterPayload) => {
     set({ isLoading: true, error: null });
     try {
-      const { user, accessToken, refreshToken } = await authApi.register(data);
+      const { user, accessToken, refreshToken, parentLinkCode } = await authApi.register(data);
       await AsyncStorage.multiSet([
         [STORAGE_KEYS.ACCESS_TOKEN, accessToken],
         [STORAGE_KEYS.REFRESH_TOKEN, refreshToken],
       ]);
-      set({ user, accessToken, isAuthenticated: true });
+      set({ user, accessToken, isAuthenticated: true, parentLinkCode: parentLinkCode ?? null });
     } catch (err) {
       set({ error: parseAuthError(err) });
       throw err;
@@ -87,6 +91,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
     }
   },
+
+  clearParentLinkCode: () => set({ parentLinkCode: null }),
 
   logout: async () => {
     set({ isLoading: true });

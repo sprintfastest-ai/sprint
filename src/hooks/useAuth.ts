@@ -13,6 +13,8 @@ export function useAuth() {
       register: state.register,
       logout: state.logout,
       clearError: state.clearError,
+      parentLinkCode: state.parentLinkCode,
+      clearParentLinkCode: state.clearParentLinkCode,
     })),
   );
 }

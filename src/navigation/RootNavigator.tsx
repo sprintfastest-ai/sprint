@@ -5,8 +5,8 @@ import { setOnSignOut } from '@/api/client';
 import type { RootStackParamList } from './types';
 import AuthNavigator from './AuthNavigator';
 import AthleteStackNavigator from './AthleteStackNavigator';
-import CoachNavigator from './CoachNavigator';
-import ParentNavigator from './ParentNavigator';
+import CoachStackNavigator from './CoachStackNavigator';
+import ParentStackNavigator from './ParentStackNavigator';
 import OnboardingScreen from '@/screens/athlete/OnboardingScreen';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -52,8 +52,8 @@ export default function RootNavigator() {
       <Stack.Screen name="Auth" component={AuthNavigator} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="AthleteTabs" component={AthleteStackNavigator} />
-      <Stack.Screen name="CoachTabs" component={CoachNavigator} />
-      <Stack.Screen name="ParentTabs" component={ParentNavigator} />
+      <Stack.Screen name="CoachTabs" component={CoachStackNavigator} />
+      <Stack.Screen name="ParentTabs" component={ParentStackNavigator} />
     </Stack.Navigator>
   );
 }

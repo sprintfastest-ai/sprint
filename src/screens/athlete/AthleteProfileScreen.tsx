@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
 import { profileApi } from '@/api/training';
+import { linksApi } from '@/api/links';
 import type { AthleteProfile } from '@/api/training';
 import type { AthleteStackParamList } from '@/navigation/types';
 
@@ -154,6 +156,20 @@ export default function AthleteProfileScreen() {
     Alert.alert('Notifications', 'Notification settings coming soon.');
   }, []);
 
+  const handleInvite = useCallback(async (relationship: 'parent' | 'coach') => {
+    const athleteId = user?.athleteId ?? user?.id;
+    if (!athleteId) return;
+    try {
+      const { code } = await linksApi.createInvite(athleteId, relationship);
+      const label = relationship === 'coach' ? 'coach' : 'parent';
+      await Share.share({
+        message: `Join me on SprintFastest! Enter this code as my ${label} to see my training: ${code}\n\n(Expires in 48 hours)`,
+      });
+    } catch {
+      Alert.alert('Something went wrong', 'Could not generate an invite code. Please try again.');
+    }
+  }, [user]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -249,6 +265,13 @@ export default function AthleteProfileScreen() {
           <SettingsRow icon="flash-outline" label="Upgrade to Premium" onPress={() => navigation.navigate('Paywall', undefined)} />
           <View style={styles.rowDivider} />
           <SettingsRow icon="medical-outline" label="Retake Diagnosis" onPress={() => navigation.navigate('DiagnosisQuiz')} />
+        </View>
+
+        {/* Invite a coach or parent */}
+        <View style={styles.settingsCard}>
+          <SettingsRow icon="person-add-outline" label="Invite a Coach" onPress={() => handleInvite('coach')} />
+          <View style={styles.rowDivider} />
+          <SettingsRow icon="people-outline" label="Invite a Parent" onPress={() => handleInvite('parent')} />
         </View>
 
         {/* Settings */}

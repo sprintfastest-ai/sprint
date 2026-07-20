@@ -9,11 +9,13 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/authStore';
 import type { RegisterPayload } from '@/api/auth.api';
 import type { AuthStackParamList } from '@/navigation/types';
 import type { User } from '@/types';
@@ -109,6 +111,14 @@ export default function RegisterScreen() {
 
     try {
       await register(payload);
+      const code = useAuthStore.getState().parentLinkCode;
+      if (code) {
+        Alert.alert(
+          'Almost there!',
+          `Because this athlete is under 13, a parent must link their account before signing in.\n\nShare this code with a parent — it expires in 48 hours:\n\n${code}`,
+          [{ text: 'Got it', onPress: () => useAuthStore.getState().clearParentLinkCode() }],
+        );
+      }
     } catch {
       // error is set in store
     }
