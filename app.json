@@ -24,7 +24,8 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
-      ]
+      ],
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
@@ -37,7 +38,16 @@
           "color": "#1A6BB5"
         }
       ],
-      "expo-av"
+      "expo-av",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {
