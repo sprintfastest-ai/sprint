@@ -25,8 +25,9 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "edgeToEdgeEnabled": true
-    },
+ "edgeToEdgeEnabled": true
+      "versionCode": 2
+ },
     "web": {
       "favicon": "./src/assets/favicon.png"
     },
