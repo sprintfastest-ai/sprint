@@ -23,6 +23,7 @@ import parentRoutes from './routes/parent';
 import chatRoutes from './routes/chat';
 import subscriptionRoutes from './routes/subscription.routes';
 import linksRoutes from './routes/links';
+import notificationsRoutes from './routes/notifications';
 
 const PORT = Number(process.env.PORT) || 3000;
 const ENV = process.env.NODE_ENV ?? 'development';
@@ -92,6 +93,7 @@ async function bootstrap(): Promise<void> {
   app.use(`${API_PREFIX}/chat`, chatRoutes);
   app.use(`${API_PREFIX}/subscription`, subscriptionRoutes);
   app.use(`${API_PREFIX}/invites`, linksRoutes);
+  app.use(`${API_PREFIX}/notifications`, notificationsRoutes);
 
   // 404 handler — must be after all routes
   app.use((_req, res) => {

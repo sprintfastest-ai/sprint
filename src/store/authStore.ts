@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as authApi from '@/api/auth.api';
 import type { RegisterPayload } from '@/api/auth.api';
 import { STORAGE_KEYS } from '@/api/client';
+import { unregisterPushToken } from '@/api/notifications';
 import type { User } from '@/types';
 
 function parseAuthError(err: unknown): string {
@@ -97,12 +98,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     set({ isLoading: true });
     try {
+      const pushToken = await AsyncStorage.getItem(STORAGE_KEYS.PUSH_TOKEN);
+      if (pushToken) {
+        await unregisterPushToken(pushToken).catch(() => undefined);
+      }
       // Best-effort server-side token revocation — don't block UI on failure
       await authApi.logout().catch(() => undefined);
     } finally {
       await AsyncStorage.multiRemove([
         STORAGE_KEYS.ACCESS_TOKEN,
         STORAGE_KEYS.REFRESH_TOKEN,
+        STORAGE_KEYS.PUSH_TOKEN,
       ]);
       set({
         user: null,

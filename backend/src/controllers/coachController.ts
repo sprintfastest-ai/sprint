@@ -11,6 +11,8 @@ import {
   updateCoachProfile as updateCoachProfileQuery,
   findCoachProfileByUserId,
 } from '@/db/queries/coaches';
+import { findAthleteProfileById } from '@/db/queries/athletes';
+import { notifyUser } from '@/services/push.service';
 import type { TrainingDay } from '@/types';
 
 /**
@@ -153,6 +155,18 @@ export async function addNote(
     await assertCoachLinkedToAthlete(coachId, athleteId);
 
     const note = await createCoachNote(coachId, athleteId, content, isVisibleToAthlete);
+
+    if (isVisibleToAthlete) {
+      const athleteProfile = await findAthleteProfileById(athleteId);
+      if (athleteProfile) {
+        await notifyUser(athleteProfile.user_id, {
+          title: '📝 New note from your coach',
+          body: content.length > 100 ? `${content.slice(0, 100)}…` : content,
+          data: { type: 'coach_note', athleteId },
+        }).catch(() => undefined);
+      }
+    }
+
     sendSuccess(res, {
       id: note.id,
       athleteId: note.athlete_id,
