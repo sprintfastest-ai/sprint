@@ -8,6 +8,8 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -16,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { chatApi } from '@/api/chat';
+import { useAudioChat } from '@/hooks/useAudioChat';
 import type { ChatMessage } from '@/types';
 import type { AthleteStackParamList } from '@/navigation/types';
 
@@ -56,9 +59,61 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const flatRef = useRef<FlatList>(null);
 
+  const {
+    status: audioStatus,
+    errorMessage: audioError,
+    startRecording,
+    stopRecordingAndSend,
+    reset: resetAudio,
+  } = useAudioChat();
+
   const scrollToEnd = useCallback(() => {
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
   }, []);
+
+  const appendAudioReply = useCallback((content: string) => {
+    setMessages((prev) => [...prev, {
+      id: String(Date.now()),
+      userId: 'ai',
+      role: 'assistant',
+      content,
+      timestamp: new Date().toISOString(),
+    }]);
+    scrollToEnd();
+  }, [scrollToEnd]);
+
+  // The backend's audio pipeline is a Phase-3 stub today — it acknowledges
+  // chunks but never sends a real reply, so this always resolves to
+  // 'beta_limited'. Handled here rather than silently timing out.
+  useEffect(() => {
+    if (audioStatus === 'beta_limited') {
+      appendAudioReply(
+        "🎙️ Voice Chat is in early beta — I heard your recording, but AI voice replies aren't wired up yet. Try typing your question for now!",
+      );
+      resetAudio();
+    } else if (audioStatus === 'error' && audioError) {
+      Alert.alert('Voice Chat', audioError);
+      resetAudio();
+    }
+  }, [audioStatus, audioError, appendAudioReply, resetAudio]);
+
+  const handleMicPress = useCallback(async () => {
+    if (audioStatus === 'recording') {
+      setMessages((prev) => [...prev, {
+        id: String(Date.now()),
+        userId: user?.id ?? 'user',
+        role: 'user',
+        content: '🎙️ Voice message',
+        timestamp: new Date().toISOString(),
+      }]);
+      scrollToEnd();
+      await stopRecordingAndSend(appendAudioReply);
+      return;
+    }
+    if (audioStatus === 'idle' || audioStatus === 'error') {
+      await startRecording();
+    }
+  }, [audioStatus, startRecording, stopRecordingAndSend, appendAudioReply, user, scrollToEnd]);
 
   useEffect(() => {
     chatApi.getHistory().then((history) => {
@@ -157,14 +212,36 @@ export default function ChatScreen() {
           contentContainerStyle={styles.chatContent}
           onContentSizeChange={scrollToEnd}
           ListHeaderComponent={<DateDivider label="Today" />}
-          ListFooterComponent={isTyping ? <TypingRow /> : null}
+          ListFooterComponent={
+            isTyping || audioStatus === 'uploading' || audioStatus === 'awaiting_reply'
+              ? <TypingRow />
+              : null
+          }
         />
 
         {/* Input bar */}
         <View style={styles.inputBar}>
-          <TouchableOpacity style={styles.micBtn} disabled accessibilityLabel="Voice input (coming soon)">
-            <Text style={{ fontSize: 20, opacity: 0.4 }}>🎤</Text>
-          </TouchableOpacity>
+          <View style={styles.micWrap}>
+            <TouchableOpacity
+              style={[styles.micBtn, audioStatus === 'recording' && styles.micBtnRecording]}
+              onPress={handleMicPress}
+              disabled={audioStatus === 'uploading' || audioStatus === 'awaiting_reply'}
+              accessibilityLabel={audioStatus === 'recording' ? 'Stop recording' : 'Voice input (beta)'}
+            >
+              {audioStatus === 'uploading' || audioStatus === 'awaiting_reply' ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Ionicons
+                  name={audioStatus === 'recording' ? 'stop-circle' : 'mic'}
+                  size={20}
+                  color={audioStatus === 'recording' ? '#fff' : COLORS.primary}
+                />
+              )}
+            </TouchableOpacity>
+            <View style={styles.betaTag}>
+              <Text style={styles.betaTagText}>BETA</Text>
+            </View>
+          </View>
 
           <TextInput
             style={styles.textInput}
@@ -376,7 +453,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  micBtn: { padding: 6 },
+  micWrap: { position: 'relative' },
+  micBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micBtnRecording: { backgroundColor: '#C0392B' },
+  betaTag: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    backgroundColor: COLORS.orange,
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  betaTagText: { fontSize: 8, fontWeight: '700', color: '#fff', letterSpacing: 0.3 },
   textInput: {
     flex: 1,
     height: 44,

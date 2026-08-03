@@ -1,6 +1,7 @@
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://api.sprintfastest.com/v1';
 
-export const WEBSOCKET_URL = process.env.EXPO_PUBLIC_WEBSOCKET_URL ?? 'wss://ws.sprintfastest.com';
+export const WEBSOCKET_URL =
+  process.env.EXPO_PUBLIC_WEBSOCKET_URL ?? 'wss://sprintfastest-api.onrender.com/ws';
 
 export const enum FEATURES {
   TRAINING_PLAN = 'training_plan',

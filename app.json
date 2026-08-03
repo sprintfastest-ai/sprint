@@ -13,7 +13,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.sprintfastest.app"
+      "bundleIdentifier": "com.sprintfastest.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "SprintFastest uses your microphone so you can talk to your AI coach in Voice Chat (beta)."
+      }
     },
     "android": {
       "adaptiveIcon": {
