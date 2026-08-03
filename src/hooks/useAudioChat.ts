@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { Audio } from 'expo-av';
+import * as Speech from 'expo-speech';
 // expo-file-system v19 replaced readAsStringAsync/EncodingType with a new
 // File-object API; the old functional API still ships under /legacy.
 import * as FileSystem from 'expo-file-system/legacy';
@@ -11,14 +13,51 @@ export type AudioChatStatus =
   | 'recording'
   | 'uploading'
   | 'awaiting_reply'
-  | 'beta_limited'
+  | 'timeout'
   | 'error';
+
+export interface AudioChatReply {
+  /** What Gemini heard, best-effort — empty if it didn't follow the expected format. */
+  transcript: string;
+  /** The coaching reply text, spoken aloud on-device via expo-speech. */
+  content: string;
+}
 
 // expo-av records a complete file rather than streaming raw PCM in real time,
 // so "chunking" here means splitting the finished recording's base64 into
 // pieces that match the audio:chunk wire contract — not true live streaming.
-const CHUNK_SIZE = 8000;
-const REPLY_TIMEOUT_MS = 8000;
+const CHUNK_SIZE = 32_000;
+const REPLY_TIMEOUT_MS = 25_000;
+
+// Forces both platforms to the same mono AAC-in-MP4 container so the server
+// only ever has to handle one mimeType, matching MIME types Gemini accepts.
+const MIME_TYPE = Platform.OS === 'web' ? 'audio/webm' : 'audio/mp4';
+const RECORDING_OPTIONS: Audio.RecordingOptions = {
+  isMeteringEnabled: false,
+  android: {
+    extension: '.m4a',
+    outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+    audioEncoder: Audio.AndroidAudioEncoder.AAC,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 64000,
+  },
+  ios: {
+    extension: '.m4a',
+    outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+    audioQuality: Audio.IOSAudioQuality.MEDIUM,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 64000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {
+    mimeType: 'audio/webm',
+    bitsPerSecond: 64000,
+  },
+};
 
 interface WsMessage {
   type: string;
@@ -75,7 +114,7 @@ export function useAudioChat() {
     }
 
     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.LOW_QUALITY);
+    const { recording } = await Audio.Recording.createAsync(RECORDING_OPTIONS);
     recordingRef.current = recording;
     setStatus('recording');
   }, []);
@@ -88,13 +127,12 @@ export function useAudioChat() {
   }, [closeSocket, reset]);
 
   /**
-   * Stops recording, uploads it to the audio WS pipeline, and waits briefly
-   * for a reply. The backend's audio handlers are a Phase-3 stub today — they
-   * acknowledge chunks but never send audio:reply_chunk — so this reliably
-   * times out into `beta_limited`. `onReply` is wired for forward
-   * compatibility once the real STT/AI/TTS pipeline lands.
+   * Stops recording, uploads it to the audio WS pipeline, and waits for a
+   * reply. The server transcribes and answers in one Gemini call, then
+   * `onReply` fires with both; the caller is expected to render `content`
+   * and this hook speaks it aloud via expo-speech.
    */
-  const stopRecordingAndSend = useCallback(async (onReply: (content: string) => void) => {
+  const stopRecordingAndSend = useCallback(async (onReply: (reply: AudioChatReply) => void) => {
     const recording = recordingRef.current;
     if (!recording || !accessToken) return;
 
@@ -124,7 +162,10 @@ export function useAudioChat() {
       };
 
       socket.onopen = () => {
-        socket.send(JSON.stringify({ type: 'audio:start_session', payload: { language: 'en-GB' } }));
+        socket.send(JSON.stringify({
+          type: 'audio:start_session',
+          payload: { language: 'en-GB', mimeType: MIME_TYPE },
+        }));
       };
 
       socket.onmessage = (event) => {
@@ -137,15 +178,19 @@ export function useAudioChat() {
           socket.send(JSON.stringify({ type: 'audio:end_session', payload: { sessionId } }));
           setStatus('awaiting_reply');
           replyTimeoutRef.current = setTimeout(() => {
-            setStatus('beta_limited');
+            setStatus('timeout');
             closeSocket();
           }, REPLY_TIMEOUT_MS);
           return;
         }
 
-        if (msg.type === 'audio:reply_chunk' || msg.type === 'audio:reply_complete') {
-          const content = (msg.payload?.transcript ?? msg.payload?.content) as string | undefined;
-          if (content) onReply(content);
+        if (msg.type === 'audio:reply_complete') {
+          const transcript = (msg.payload?.transcript as string) ?? '';
+          const content = (msg.payload?.content as string) ?? '';
+          if (content) {
+            onReply({ transcript, content });
+            Speech.speak(content, { language: 'en-GB' });
+          }
           setStatus('idle');
           closeSocket();
           return;

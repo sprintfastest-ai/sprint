@@ -18,7 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { chatApi } from '@/api/chat';
-import { useAudioChat } from '@/hooks/useAudioChat';
+import { useAudioChat, type AudioChatReply } from '@/hooks/useAudioChat';
 import type { ChatMessage } from '@/types';
 import type { AthleteStackParamList } from '@/navigation/types';
 
@@ -67,11 +67,20 @@ export default function ChatScreen() {
     reset: resetAudio,
   } = useAudioChat();
 
+  const pendingVoiceMessageId = useRef<string | null>(null);
+
   const scrollToEnd = useCallback(() => {
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
   }, []);
 
-  const appendAudioReply = useCallback((content: string) => {
+  const handleAudioReply = useCallback(({ transcript, content }: AudioChatReply) => {
+    // Swap the "🎙️ Voice message" placeholder for what Gemini actually heard.
+    const placeholderId = pendingVoiceMessageId.current;
+    if (placeholderId && transcript) {
+      setMessages((prev) => prev.map((m) => (m.id === placeholderId ? { ...m, content: transcript } : m)));
+    }
+    pendingVoiceMessageId.current = null;
+
     setMessages((prev) => [...prev, {
       id: String(Date.now()),
       userId: 'ai',
@@ -82,38 +91,35 @@ export default function ChatScreen() {
     scrollToEnd();
   }, [scrollToEnd]);
 
-  // The backend's audio pipeline is a Phase-3 stub today — it acknowledges
-  // chunks but never sends a real reply, so this always resolves to
-  // 'beta_limited'. Handled here rather than silently timing out.
   useEffect(() => {
-    if (audioStatus === 'beta_limited') {
-      appendAudioReply(
-        "🎙️ Voice Chat is in early beta — I heard your recording, but AI voice replies aren't wired up yet. Try typing your question for now!",
-      );
+    if (audioStatus === 'timeout') {
+      Alert.alert('Voice Chat', "That's taking longer than expected. Please try again.");
       resetAudio();
     } else if (audioStatus === 'error' && audioError) {
       Alert.alert('Voice Chat', audioError);
       resetAudio();
     }
-  }, [audioStatus, audioError, appendAudioReply, resetAudio]);
+  }, [audioStatus, audioError, resetAudio]);
 
   const handleMicPress = useCallback(async () => {
     if (audioStatus === 'recording') {
+      const placeholderId = String(Date.now());
+      pendingVoiceMessageId.current = placeholderId;
       setMessages((prev) => [...prev, {
-        id: String(Date.now()),
+        id: placeholderId,
         userId: user?.id ?? 'user',
         role: 'user',
         content: '🎙️ Voice message',
         timestamp: new Date().toISOString(),
       }]);
       scrollToEnd();
-      await stopRecordingAndSend(appendAudioReply);
+      await stopRecordingAndSend(handleAudioReply);
       return;
     }
     if (audioStatus === 'idle' || audioStatus === 'error') {
       await startRecording();
     }
-  }, [audioStatus, startRecording, stopRecordingAndSend, appendAudioReply, user, scrollToEnd]);
+  }, [audioStatus, startRecording, stopRecordingAndSend, handleAudioReply, user, scrollToEnd]);
 
   useEffect(() => {
     chatApi.getHistory().then((history) => {
