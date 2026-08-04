@@ -8,6 +8,8 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -16,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { chatApi } from '@/api/chat';
+import { useAudioChat, type AudioChatReply } from '@/hooks/useAudioChat';
 import type { ChatMessage } from '@/types';
 import type { AthleteStackParamList } from '@/navigation/types';
 
@@ -56,9 +59,67 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const flatRef = useRef<FlatList>(null);
 
+  const {
+    status: audioStatus,
+    errorMessage: audioError,
+    startRecording,
+    stopRecordingAndSend,
+    reset: resetAudio,
+  } = useAudioChat();
+
+  const pendingVoiceMessageId = useRef<string | null>(null);
+
   const scrollToEnd = useCallback(() => {
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
   }, []);
+
+  const handleAudioReply = useCallback(({ transcript, content }: AudioChatReply) => {
+    // Swap the "🎙️ Voice message" placeholder for what Gemini actually heard.
+    const placeholderId = pendingVoiceMessageId.current;
+    if (placeholderId && transcript) {
+      setMessages((prev) => prev.map((m) => (m.id === placeholderId ? { ...m, content: transcript } : m)));
+    }
+    pendingVoiceMessageId.current = null;
+
+    setMessages((prev) => [...prev, {
+      id: String(Date.now()),
+      userId: 'ai',
+      role: 'assistant',
+      content,
+      timestamp: new Date().toISOString(),
+    }]);
+    scrollToEnd();
+  }, [scrollToEnd]);
+
+  useEffect(() => {
+    if (audioStatus === 'timeout') {
+      Alert.alert('Voice Chat', "That's taking longer than expected. Please try again.");
+      resetAudio();
+    } else if (audioStatus === 'error' && audioError) {
+      Alert.alert('Voice Chat', audioError);
+      resetAudio();
+    }
+  }, [audioStatus, audioError, resetAudio]);
+
+  const handleMicPress = useCallback(async () => {
+    if (audioStatus === 'recording') {
+      const placeholderId = String(Date.now());
+      pendingVoiceMessageId.current = placeholderId;
+      setMessages((prev) => [...prev, {
+        id: placeholderId,
+        userId: user?.id ?? 'user',
+        role: 'user',
+        content: '🎙️ Voice message',
+        timestamp: new Date().toISOString(),
+      }]);
+      scrollToEnd();
+      await stopRecordingAndSend(handleAudioReply);
+      return;
+    }
+    if (audioStatus === 'idle' || audioStatus === 'error') {
+      await startRecording();
+    }
+  }, [audioStatus, startRecording, stopRecordingAndSend, handleAudioReply, user, scrollToEnd]);
 
   useEffect(() => {
     chatApi.getHistory().then((history) => {
@@ -157,14 +218,36 @@ export default function ChatScreen() {
           contentContainerStyle={styles.chatContent}
           onContentSizeChange={scrollToEnd}
           ListHeaderComponent={<DateDivider label="Today" />}
-          ListFooterComponent={isTyping ? <TypingRow /> : null}
+          ListFooterComponent={
+            isTyping || audioStatus === 'uploading' || audioStatus === 'awaiting_reply'
+              ? <TypingRow />
+              : null
+          }
         />
 
         {/* Input bar */}
         <View style={styles.inputBar}>
-          <TouchableOpacity style={styles.micBtn} disabled accessibilityLabel="Voice input (coming soon)">
-            <Text style={{ fontSize: 20, opacity: 0.4 }}>🎤</Text>
-          </TouchableOpacity>
+          <View style={styles.micWrap}>
+            <TouchableOpacity
+              style={[styles.micBtn, audioStatus === 'recording' && styles.micBtnRecording]}
+              onPress={handleMicPress}
+              disabled={audioStatus === 'uploading' || audioStatus === 'awaiting_reply'}
+              accessibilityLabel={audioStatus === 'recording' ? 'Stop recording' : 'Voice input (beta)'}
+            >
+              {audioStatus === 'uploading' || audioStatus === 'awaiting_reply' ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Ionicons
+                  name={audioStatus === 'recording' ? 'stop-circle' : 'mic'}
+                  size={20}
+                  color={audioStatus === 'recording' ? '#fff' : COLORS.primary}
+                />
+              )}
+            </TouchableOpacity>
+            <View style={styles.betaTag}>
+              <Text style={styles.betaTagText}>BETA</Text>
+            </View>
+          </View>
 
           <TextInput
             style={styles.textInput}
@@ -376,7 +459,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  micBtn: { padding: 6 },
+  micWrap: { position: 'relative' },
+  micBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micBtnRecording: { backgroundColor: '#C0392B' },
+  betaTag: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    backgroundColor: COLORS.orange,
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  betaTagText: { fontSize: 8, fontWeight: '700', color: '#fff', letterSpacing: 0.3 },
   textInput: {
     flex: 1,
     height: 44,

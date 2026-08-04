@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: '@sprintfastest:access_token',
   REFRESH_TOKEN: '@sprintfastest:refresh_token',
+  PUSH_TOKEN: '@sprintfastest:push_token',
 } as const;
 
 const API_BASE_URL =

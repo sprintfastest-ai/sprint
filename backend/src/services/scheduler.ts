@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import pool from '@/db/pool';
 import { generateWeeklyPlan } from './ai';
 import { sendWeeklySummary } from './email';
+import { notifyUsers } from './push.service';
 import { insertPlan } from '@/db/queries/training';
 import logger from '@/utils/logger';
 
@@ -11,6 +12,21 @@ function getNextMonday(): string {
   const diff = day === 0 ? 1 : 8 - day;
   d.setDate(d.getDate() + diff);
   return d.toISOString().split('T')[0] as string;
+}
+
+/** Monday-start ISO date (YYYY-MM-DD) of the week containing today. */
+function currentWeekStartDate(): string {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().split('T')[0] as string;
+}
+
+/** ISO weekday: 1 = Monday … 7 = Sunday — matches training_plans.plan_data dayNumber. */
+function todayISODow(): number {
+  const day = new Date().getDay();
+  return day === 0 ? 7 : day;
 }
 
 // Every Sunday at 20:00 — generate next week's plans for all athletes
@@ -105,8 +121,52 @@ export function scheduleWeeklySummaryEmails(): void {
   });
 }
 
+// Every day at 17:00 — remind athletes with an incomplete session scheduled for today
+export function scheduleSessionReminders(): void {
+  cron.schedule('0 17 * * *', async () => {
+    logger.info('Cron: sending session reminders');
+
+    try {
+      const weekStartDate = currentWeekStartDate();
+      const dayNumber = todayISODow();
+
+      const { rows } = await pool.query<{ user_id: string }>(
+        `SELECT DISTINCT ap.user_id
+         FROM training_plans tp
+         JOIN athlete_profiles ap ON ap.id = tp.athlete_id
+         WHERE tp.week_start_date = $1
+           AND EXISTS (
+             SELECT 1 FROM jsonb_array_elements(tp.plan_data) AS day
+             WHERE (day->>'dayNumber')::int = $2
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM sessions s
+             WHERE s.athlete_id = tp.athlete_id
+               AND s.day_number = $2
+               AND s.completed_at >= $1::date
+           )`,
+        [weekStartDate, dayNumber],
+      );
+
+      await notifyUsers(
+        rows.map((r) => r.user_id),
+        {
+          title: "Today's session is waiting 🏃",
+          body: "Don't break your streak — log today's training session.",
+          data: { type: 'session_reminder' },
+        },
+      );
+
+      logger.info('Cron: session reminders sent', { count: rows.length });
+    } catch (err) {
+      logger.error('Cron session reminder error', { error: (err as Error).message });
+    }
+  });
+}
+
 export function initScheduler(): void {
   scheduleWeeklyPlanGeneration();
   scheduleWeeklySummaryEmails();
+  scheduleSessionReminders();
   logger.info('Scheduled tasks initialised');
 }

@@ -10,10 +10,17 @@ import {
   upsertPersonalBest,
   insertPlan,
 } from '@/db/queries/training';
-import { recordSessionCompletion, checkAndUnlockBadges, getAchievements as getAchievementsQuery } from '@/db/queries/athletes';
+import {
+  recordSessionCompletion,
+  checkAndUnlockBadges,
+  getAchievements as getAchievementsQuery,
+  findAthleteProfileById,
+  BADGE_DEFINITIONS,
+} from '@/db/queries/athletes';
 import { generateWeeklyPlan, runDiagnosis } from '@/services/ai';
 import { isPremium } from '@/db/queries/subscriptions';
 import { createLinkInvite } from '@/db/queries/links';
+import { notifyUser } from '@/services/push.service';
 import pool from '@/db/pool';
 import type { PersonalBest, WeaknessType } from '@/types';
 
@@ -130,6 +137,23 @@ export async function completeSession(
 
     await recordSessionCompletion(athleteId, new Date());
     const newBadges = await checkAndUnlockBadges(athleteId);
+
+    if (newBadges.length) {
+      const profile = await findAthleteProfileById(athleteId);
+      if (profile) {
+        await Promise.allSettled(
+          newBadges.map((badge) => {
+            const label = BADGE_DEFINITIONS.find((b) => b.type === badge.badge_type)?.label
+              ?? 'You earned a new badge';
+            return notifyUser(profile.user_id, {
+              title: '🏅 Badge unlocked!',
+              body: label,
+              data: { type: 'badge_unlocked', badgeType: badge.badge_type },
+            });
+          }),
+        );
+      }
+    }
 
     sendSuccess(res, { ...session, newBadges }, 201);
   } catch (err) {

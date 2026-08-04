@@ -176,12 +176,17 @@ Key endpoints:
 - [ ] App Store / Play Store submission via EAS
 - [ ] Production hardening (NODE_ENV=production, rate limits, monitoring)
 
-### Phase 3.5 — Audio Chat Beta (post-MVP v1.1)
-- [ ] Microphone permission handling (expo-av installed)
-- [ ] Record → chunk → stream UI in ChatCoachScreen
-- [ ] AI audio response playback
-- [ ] Beta label in UI
-- Backend WebSocket handlers already built: `audio:start_session`, `audio:chunk`, `audio:end_session`
+### Phase 3.5 — Audio Chat Beta (post-MVP v1.1) ✅ COMPLETE
+- [x] Microphone permission handling (expo-av + NSMicrophoneUsageDescription)
+- [x] Record → chunk → stream UI in ChatScreen (src/hooks/useAudioChat.ts)
+- [x] AI audio response playback — Gemini transcribes + replies in one multimodal
+      call (no separate STT service); reply text is spoken on-device via expo-speech
+      rather than server-synthesized audio
+- [x] Beta label in UI
+- Backend: `audio:start_session` / `audio:chunk` / `audio:end_session` fully implemented
+  in `backend/src/websocket/handlers/audio.handler.ts`. Voice exchanges are persisted to
+  the same `chat_messages` table as typed chat and count against the same free-tier
+  daily limit.
 
 ---
 
