@@ -16,8 +16,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
+import * as Notifications from 'expo-notifications';
 import { profileApi } from '@/api/training';
 import { linksApi } from '@/api/links';
+import { requestPasswordReset } from '@/api/auth.api';
 import type { AthleteProfile } from '@/api/training';
 import type { AthleteStackParamList } from '@/navigation/types';
 
@@ -127,18 +129,29 @@ export default function AthleteProfileScreen() {
   }, [logout]);
 
   const handleChangePassword = useCallback(() => {
+    const email = user?.email;
+    if (!email) return;
     Alert.alert(
       'Change Password',
-      'A password reset link will be sent to your email address.',
+      `A password reset link will be sent to ${email}.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Send Link',
-          onPress: () => Alert.alert('Email Sent', 'Check your inbox for the password reset link.'),
+          onPress: async () => {
+            try {
+              await requestPasswordReset(email);
+              Alert.alert('Email Sent', 'Check your inbox for the password reset link.');
+            } catch {
+              // The endpoint always resolves 200 whether or not the email exists, so a
+              // catch here means the request itself failed (network/server), not a bad email.
+              Alert.alert('Error', "Couldn't send the reset link. Please try again.");
+            }
+          },
         },
       ],
     );
-  }, []);
+  }, [user]);
 
   const handlePrivacyPolicy = useCallback(() => {
     Linking.openURL('https://sprintfastest.com/privacy').catch(() =>
@@ -152,8 +165,38 @@ export default function AthleteProfileScreen() {
     );
   }, []);
 
-  const handleNotifications = useCallback(() => {
-    Alert.alert('Notifications', 'Notification settings coming soon.');
+  const handleNotifications = useCallback(async () => {
+    const { status } = await Notifications.getPermissionsAsync();
+
+    if (status === 'granted') {
+      Alert.alert(
+        'Notifications',
+        'Push notifications are on — you\'ll get badge unlocks, coach notes, and session reminders. Manage the exact types in your device Settings.',
+        [
+          { text: 'OK', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ],
+      );
+      return;
+    }
+
+    if (status === 'undetermined') {
+      const { status: requested } = await Notifications.requestPermissionsAsync();
+      if (requested === 'granted') {
+        Alert.alert('Notifications Enabled', "You'll now get badge unlocks, coach notes, and session reminders.");
+      }
+      return;
+    }
+
+    // 'denied' — iOS/Android won't let the app re-prompt, only Settings can change it.
+    Alert.alert(
+      'Notifications Off',
+      "You've turned off notifications for SprintFastest. Enable them in Settings to get badge unlocks, coach notes, and session reminders.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ],
+    );
   }, []);
 
   const handleInvite = useCallback(async (relationship: 'parent' | 'coach') => {

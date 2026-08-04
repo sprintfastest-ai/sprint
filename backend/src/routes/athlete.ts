@@ -13,6 +13,7 @@ import {
   getMyProfile,
   updateMyProfile,
   getAchievements,
+  getInsight,
   createInvite,
 } from '@/controllers/athleteController';
 
@@ -81,6 +82,8 @@ router.post(
 );
 
 router.get('/:athleteId/achievements', athleteIdParam, validate, getAchievements);
+
+router.get('/:athleteId/insight', athleteIdParam, validate, getInsight);
 
 router.post(
   '/:athleteId/invites',

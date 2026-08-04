@@ -149,7 +149,7 @@ Key endpoints:
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
-- `POST /api/v1/auth/forgot-password`
+- `POST /api/v1/auth/request-reset`
 - `POST /api/v1/auth/reset-password`
 - `GET  /api/v1/athletes/me`
 - `POST /api/v1/chat/message` — typed chat; the mobile app uses this REST endpoint, not the WS `chat:send`
@@ -185,9 +185,8 @@ Key endpoints:
 - [x] ProgressScreen — `trainingApi.getPersonalBests/logPersonalBest`, PBs sub-tab includes the
       dedicated PB timeline originally planned as a separate PersonalBestsScreen
 - [x] All Phase 2 screens wired to live backend API
-
-**Known gaps:** Dashboard's "AI insight" card is a hardcoded string — there is no backend `insight`
-endpoint at all (not even a stub) to wire it to. Its notification bell icon is also a no-op.
+- [x] Dashboard "AI insight" card — real `GET /athletes/:athleteId/insight` (Gemini, 4h in-memory
+      cache per athlete); notification bell now opens Profile
 
 ### Phase 3 — Advanced Features ✅ COMPLETE
 - [x] DiagnosisQuizScreen — `diagnosisApi.runDiagnosis()` → real `/athletes/diagnosis`
@@ -202,12 +201,10 @@ endpoint at all (not even a stub) to wire it to. Its notification bell icon is a
       (`src/services/purchases.ts`), real webhook signature verification server-side
 - [x] Push notifications (expo-notifications) — permission flow, token registration, real triggers
       (badge unlocks, coach notes, daily session reminders)
+- [x] AthleteProfileScreen's "Change Password" (real `request-reset` call) and "Notifications"
+      (real permission status + Settings deep-link) settings rows
 - [ ] App Store / Play Store submission via EAS
 - [ ] Production hardening (NODE_ENV=production, rate limits, monitoring)
-
-**Known gaps:** AthleteProfileScreen's "Change Password" and "Notifications" settings rows are
-Alert-only stubs — "Change Password" doesn't call the real forgot-password endpoint that already
-exists in the backend, and "Notifications" just says "coming soon".
 
 ### Phase 3.5 — Audio Chat Beta (post-MVP v1.1) ✅ COMPLETE
 - [x] Microphone permission handling (expo-av + NSMicrophoneUsageDescription)

@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import logger from '@/utils/logger';
 import { AppError } from '@/middleware/errorHandler';
 import { ERROR_CODES } from '@/utils/constants';
-import type { TrainingPlan, Diagnosis, WeaknessType } from '@/types';
+import type { TrainingPlan, Diagnosis, WeaknessType, Session, PersonalBest } from '@/types';
 
 let genAI: GoogleGenerativeAI | null = null;
 
@@ -151,6 +151,62 @@ Return ONLY the cue text, no quotes, no explanation.
     return result.response.text().trim();
   } catch (err) {
     logger.error('Gemini cue error', { error: (err as Error).message });
+    throw new AppError('AI service unavailable', ERROR_CODES.AI_ERROR, 503);
+  }
+}
+
+/**
+ * Generates a 1-2 sentence coaching insight for the Dashboard's "Your Coach's
+ * Take" card, based on the athlete's recent sessions, personal bests, and
+ * (if they have one yet) their latest weakness diagnosis.
+ */
+export async function generateInsight(
+  sessions: Session[],
+  pbs: PersonalBest[],
+  diagnosis: Diagnosis | null,
+): Promise<string> {
+  const sessionSummary = sessions.length > 0
+    ? sessions
+        .slice(0, 8) // rows come back newest-first; 8 is plenty of context
+        .map((s) => {
+          const times = s.timesRecorded.length > 0
+            ? s.timesRecorded.map((t) => `${t.distance}m ${t.timeSeconds}s`).join(', ')
+            : 'no times recorded';
+          return `${s.completedAt}: ${times}`;
+        })
+        .join('\n')
+    : 'No sessions recorded yet.';
+
+  const pbSummary = pbs.length > 0
+    ? pbs.map((pb) => `${pb.distance}m: ${pb.timeSeconds}s`).join(', ')
+    : 'No personal bests recorded yet.';
+
+  const diagnosisSummary = diagnosis
+    ? `Diagnosed weakness: ${diagnosis.weaknessType} (on ${diagnosis.diagnosedAt})`
+    : 'Not yet diagnosed.';
+
+  const prompt = `
+You are an expert sprint coach speaking directly to the athlete for their app dashboard.
+
+Recent sessions (newest first):
+${sessionSummary}
+
+Personal bests: ${pbSummary}
+${diagnosisSummary}
+
+In 1-2 short sentences, give the athlete a specific, encouraging, evidence-based coaching insight based
+on their recent data. Mention a concrete trend if one is visible (e.g. time improvement, drop in session
+frequency, PB progress). If data is sparse, give a motivational principle related to their diagnosed
+weakness, or a general one if not yet diagnosed. Address the athlete directly ("Your..."). Do NOT use
+markdown or quotes. Return only the insight text, nothing else.
+`;
+
+  try {
+    const model = getModel();
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+  } catch (err) {
+    logger.error('Gemini insight error', { error: (err as Error).message });
     throw new AppError('AI service unavailable', ERROR_CODES.AI_ERROR, 503);
   }
 }

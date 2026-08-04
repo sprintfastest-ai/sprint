@@ -17,12 +17,12 @@ import {
   findAthleteProfileById,
   BADGE_DEFINITIONS,
 } from '@/db/queries/athletes';
-import { generateWeeklyPlan, runDiagnosis } from '@/services/ai';
+import { generateWeeklyPlan, runDiagnosis, generateInsight } from '@/services/ai';
 import { isPremium } from '@/db/queries/subscriptions';
 import { createLinkInvite } from '@/db/queries/links';
 import { notifyUser } from '@/services/push.service';
 import pool from '@/db/pool';
-import type { PersonalBest, WeaknessType } from '@/types';
+import type { PersonalBest, WeaknessType, Diagnosis } from '@/types';
 
 /** Monday-start ISO date (YYYY-MM-DD) of the week containing `date`. */
 function currentWeekStartDate(date = new Date()): string {
@@ -409,6 +409,52 @@ export async function getAchievements(
       unlockedAt: r.unlocked_at,
     }));
     sendSuccess(res, achievements);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Dashboard AI insight ───────────────────────────────────────────────────
+
+interface InsightCacheEntry {
+  insight: string;
+  expiresAt: number;
+}
+
+/** The insight only needs to feel "fresh", not real-time — cache it a few hours per athlete. */
+const insightCache = new Map<string, InsightCacheEntry>();
+const INSIGHT_CACHE_TTL_MS = 4 * 60 * 60 * 1_000;
+
+export async function getInsight(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { athleteId } = req.params as { athleteId: string };
+    assertCanAccessAthlete(req, athleteId);
+
+    const cached = insightCache.get(athleteId);
+    if (cached && cached.expiresAt > Date.now()) {
+      sendSuccess(res, { insight: cached.insight });
+      return;
+    }
+
+    const [sessions, pbs, diagnosisRows] = await Promise.all([
+      getSessionsByAthlete(athleteId),
+      getPersonalBestsByAthlete(athleteId),
+      pool.query<Diagnosis>(
+        `SELECT weakness_type AS "weaknessType", created_at AS "diagnosedAt"
+         FROM diagnoses WHERE athlete_id = $1 ORDER BY created_at DESC LIMIT 1`,
+        [athleteId],
+      ),
+    ]);
+    const diagnosis = diagnosisRows.rows[0] ?? null;
+
+    const insight = await generateInsight(sessions, pbs, diagnosis);
+    insightCache.set(athleteId, { insight, expiresAt: Date.now() + INSIGHT_CACHE_TTL_MS });
+
+    sendSuccess(res, { insight });
   } catch (err) {
     next(err);
   }
