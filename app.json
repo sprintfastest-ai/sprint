@@ -51,6 +51,14 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "organization": "REPLACE_WITH_SENTRY_ORG_SLUG",
+          "project": "REPLACE_WITH_SENTRY_PROJECT_SLUG"
+        }
       ]
     ],
     "extra": {
