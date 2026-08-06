@@ -18,7 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { trainingApi } from '@/api/training';
 import { getBadgeInfo } from '@/utils/badges';
-import { formatSessionType } from '@/utils/formatters';
+import { formatSessionType, safeLocaleDate } from '@/utils/formatters';
 import type { TrainingPlan, TrainingDay, Drill } from '@/types';
 import type { AthleteStackParamList } from '@/navigation/types';
 
@@ -133,7 +133,7 @@ export default function TrainingScreen() {
   }, [plan, user, todayDay, navigation]);
 
   const weekStart = plan ? new Date(plan.weekStartDate) : new Date();
-  const weekLabel = weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const weekLabel = safeLocaleDate(weekStart, { day: 'numeric', month: 'short' });
 
   const drillDetail = (drill: Drill) => {
     const parts: string[] = [];

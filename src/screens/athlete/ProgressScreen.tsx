@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { trainingApi } from '@/api/training';
+import { safeLocaleDate } from '@/utils/formatters';
 import type { PersonalBest } from '@/types';
 
 const COLORS = {
@@ -184,7 +185,7 @@ function PBsTab({
           </View>
           <Text style={styles.pbDate}>
             {pb100
-              ? `Set ${new Date(pb100.recordedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+              ? `Set ${safeLocaleDate(new Date(pb100.recordedAt), { day: 'numeric', month: 'short' })}`
               : 'No time logged yet'}
           </Text>
           {pb100 && <Sparkline data={[pb100.timeSeconds]} />}
@@ -200,7 +201,7 @@ function PBsTab({
           <Text style={styles.pbDistLabel}>400m</Text>
           <Text style={styles.emptyTime}>{getPb(400) ? `${getPb(400)!.timeSeconds}s` : '--'}</Text>
           <Text style={styles.emptyPrompt}>
-            {getPb(400) ? `Set ${new Date(getPb(400)!.recordedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'Tap to log your first time'}
+            {getPb(400) ? `Set ${safeLocaleDate(new Date(getPb(400)!.recordedAt), { day: 'numeric', month: 'short' })}` : 'Tap to log your first time'}
           </Text>
         </View>
         <View style={styles.addBtn}>
@@ -221,7 +222,7 @@ function PBCard({ dist, pb, onPress }: { dist: string; pb?: PersonalBest; onPres
       <Text style={styles.pbCardTime}>{pb ? `${pb.timeSeconds}s` : '—'}</Text>
       <Text style={styles.pbDate}>
         {pb
-          ? `Set ${new Date(pb.recordedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+          ? `Set ${safeLocaleDate(new Date(pb.recordedAt), { day: 'numeric', month: 'short' })}`
           : 'No time yet'}
       </Text>
     </TouchableOpacity>
@@ -460,7 +461,7 @@ function HistoryTab({ pbs }: { pbs: PersonalBest[] }) {
           </View>
           <Text style={styles.historyTime}>{pb.timeSeconds}s</Text>
           <Text style={styles.historyDate}>
-            {new Date(pb.recordedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+            {safeLocaleDate(new Date(pb.recordedAt), { day: 'numeric', month: 'short' })}
           </Text>
           <View style={styles.trendDot}>
             <Ionicons name="trending-up" size={14} color={COLORS.green} />

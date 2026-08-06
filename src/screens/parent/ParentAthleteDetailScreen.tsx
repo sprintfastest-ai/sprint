@@ -5,6 +5,7 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { parentApi, type AthleteProgress } from '@/api/parent';
+import { safeLocaleDate } from '@/utils/formatters';
 import type { ParentStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<ParentStackParamList, 'AthleteDetail'>;
@@ -70,7 +71,7 @@ export default function ParentAthleteDetailScreen() {
               <View key={s.id} style={styles.sessionRow}>
                 <Ionicons name="checkmark-circle" size={16} color={COLORS.green} />
                 <Text style={styles.sessionText}>
-                  {new Date(s.completedAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  {safeLocaleDate(new Date(s.completedAt), { weekday: 'short', day: 'numeric', month: 'short' })}
                 </Text>
               </View>
             ))

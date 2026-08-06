@@ -14,7 +14,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
-import { getWeekStartDate, formatSessionType } from '@/utils/formatters';
+import { getWeekStartDate, formatSessionType, safeLocaleDate } from '@/utils/formatters';
 import { profileApi, trainingApi } from '@/api/training';
 import type { AthleteTabParamList, AthleteStackParamList } from '@/navigation/types';
 
@@ -66,12 +66,7 @@ export default function AthleteDashboardScreen() {
 
   const firstName = user?.email?.split('@')[0] ?? 'Athlete';
   const today = new Date();
-  const dateStr = today.toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const dateStr = safeLocaleDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   const todayDay = currentPlan?.days[today.getDay() === 0 ? 6 : today.getDay() - 1];
 
