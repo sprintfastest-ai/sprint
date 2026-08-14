@@ -85,4 +85,12 @@ export const trainingApi = {
     );
     return data.data;
   },
+
+  getInsight: async (athleteId: string): Promise<string> => {
+    const { data } = await client.get<ApiResponse<{ insight: string }>>(
+      `/athletes/${athleteId}/insight`,
+      { timeout: 30_000 },
+    );
+    return data.data.insight;
+  },
 };

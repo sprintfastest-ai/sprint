@@ -17,6 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/useAuth';
 import { coachApi, type CoachNote } from '@/api/coach';
+import { safeLocaleDate } from '@/utils/formatters';
 import type { CoachStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<CoachStackParamList, 'AthleteDetail'>;
@@ -92,7 +93,7 @@ export default function CoachAthleteDetailScreen() {
               <View style={styles.noteCard}>
                 <Text style={styles.noteContent}>{item.content}</Text>
                 <View style={styles.noteFooter}>
-                  <Text style={styles.noteDate}>{new Date(item.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</Text>
+                  <Text style={styles.noteDate}>{safeLocaleDate(new Date(item.createdAt), { day: 'numeric', month: 'short' })}</Text>
                   {item.isVisibleToAthlete && (
                     <View style={styles.visibleBadge}>
                       <Ionicons name="eye-outline" size={11} color={COLORS.primary} />

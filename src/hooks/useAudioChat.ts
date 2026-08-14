@@ -30,8 +30,11 @@ const CHUNK_SIZE = 32_000;
 const REPLY_TIMEOUT_MS = 25_000;
 
 // Forces both platforms to the same mono AAC-in-MP4 container so the server
-// only ever has to handle one mimeType, matching MIME types Gemini accepts.
-const MIME_TYPE = Platform.OS === 'web' ? 'audio/webm' : 'audio/mp4';
+// only ever has to handle one mimeType. Gemini's documented supported audio
+// MIME types are audio/wav, audio/mp3, audio/aiff, audio/aac, audio/ogg,
+// audio/flac — audio/mp4 is NOT on that list, so we label it audio/aac (the
+// actual codec inside the .m4a container) rather than the container format.
+const MIME_TYPE = Platform.OS === 'web' ? 'audio/webm' : 'audio/aac';
 const RECORDING_OPTIONS: Audio.RecordingOptions = {
   isMeteringEnabled: false,
   android: {

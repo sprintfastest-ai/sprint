@@ -28,8 +28,12 @@ const FREE_DAILY_CHAT_LIMIT = 15;
 /** Roughly 6 minutes of 64kbps mono AAC — a generous cap for a "voice message". */
 const MAX_BASE64_CHARS = 4 * 1024 * 1024;
 
-const SUPPORTED_MIME_TYPES = new Set(['audio/mp4', 'audio/aac', 'audio/wav', 'audio/webm', 'audio/3gpp']);
-const DEFAULT_MIME_TYPE = 'audio/mp4';
+// audio/mp4 and audio/webm are kept in the allowlist for forward
+// compatibility (older clients, web), but aren't Gemini's documented
+// supported types — audio/aac is what the mobile client actually sends.
+// See ai.google.dev/gemini-api/docs/audio for the current supported list.
+const SUPPORTED_MIME_TYPES = new Set(['audio/aac', 'audio/wav', 'audio/mp3', 'audio/ogg', 'audio/flac', 'audio/mp4', 'audio/webm']);
+const DEFAULT_MIME_TYPE = 'audio/aac';
 
 function send(socket: AuthenticatedSocket, msg: OutboundMessage): void {
   if (socket.readyState === WebSocket.OPEN) {

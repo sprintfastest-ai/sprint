@@ -97,29 +97,44 @@ These are **React web files** (not React Native). They render iPhone 14 Pro fram
 | `ChatCoach.tsx` | `src/screens/main/ChatCoachScreen.tsx` | Tab: Chat |
 | `LogTime.tsx` | `src/screens/main/ProgressScreen.tsx` | Tab: Progress |
 | `ProgressTracker.tsx` | `src/screens/main/ProgressScreen.tsx` | Tab: Progress |
-| `DiagnosisQuiz.tsx` | `src/screens/main/DiagnosisQuizScreen.tsx` | Phase 3 |
-| `DiagnosisResults.tsx` | `src/screens/main/DiagnosisResultsScreen.tsx` | Phase 3 |
-| `PersonalBests.tsx` | `src/screens/main/PersonalBestsScreen.tsx` | Phase 3 |
-| `Achievements.tsx` | `src/screens/main/AchievementsScreen.tsx` | Phase 3 |
-| `BadgeGallery.tsx` | `src/screens/main/BadgeGalleryScreen.tsx` | Phase 3 |
+| `DiagnosisQuiz.tsx` | `src/screens/athlete/DiagnosisQuizScreen.tsx` | Athlete stack (modal) |
+| `DiagnosisResults.tsx` | `src/screens/athlete/DiagnosisResultsScreen.tsx` | Athlete stack (modal) |
+| `PersonalBests.tsx` | folded into `src/screens/athlete/ProgressScreen.tsx` (PBs sub-tab) | Tab: Progress |
+| `Achievements.tsx` | `src/screens/athlete/AchievementsScreen.tsx` | Athlete stack |
+| `BadgeGallery.tsx` | folded into `src/screens/athlete/AchievementsScreen.tsx` (badge grid) | Athlete stack |
+
+Note: `PersonalBestsScreen.tsx` and `BadgeGalleryScreen.tsx` as separate files were never built — their
+Figma content was implemented as sub-views of `ProgressScreen` and `AchievementsScreen` instead. Actual
+screen files also live under `src/screens/{athlete,coach,parent}/`, not `src/screens/main/`.
 
 ---
 
 ## Navigation Structure
 
+Real structure as implemented (differs from the originally planned single "MainNavigator" — the app grew
+separate role-based navigators for athlete/coach/parent, plus onboarding and modal screens not in the
+original plan):
+
 ```
-RootNavigator
-├── AuthNavigator (Stack) — shown when !isAuthenticated
+RootNavigator (Stack) — role-based root switch
+├── Auth           → AuthNavigator (Stack) — shown when !isAuthenticated
 │   ├── Login
 │   ├── Register
 │   ├── ForgotPassword
 │   └── ResetPassword  { token: string }
-└── MainNavigator (Bottom Tabs) — shown when isAuthenticated
-    ├── Home        → HomeScreen
-    ├── Training    → TrainingPlanScreen
-    ├── Chat        → ChatCoachScreen
-    ├── Progress    → ProgressScreen (sub-tabs: PBs / Log Time / History)
-    └── Profile     → ProfileScreen
+├── Onboarding     → OnboardingScreen — first-run profile setup for new athletes
+├── AthleteTabs    → AthleteStackNavigator (Stack)
+│   ├── Tabs → AthleteNavigator (Bottom Tabs: Dashboard "Home" / Training / Progress / Chat / Profile)
+│   ├── DiagnosisQuiz     (modal)
+│   ├── DiagnosisResults  (modal)
+│   ├── Achievements
+│   └── Paywall           (modal) — RevenueCat purchase/restore flow
+├── CoachTabs      → CoachStackNavigator (Stack)
+│   ├── Tabs → CoachNavigator (Bottom Tabs: Athletes / Profile)
+│   └── AthleteDetail — roster athlete's plan/notes/progress
+└── ParentTabs     → ParentStackNavigator (Stack)
+    ├── Tabs → ParentNavigator (Bottom Tabs: Overview / Profile)
+    └── AthleteDetail — linked athlete's PBs/sessions/diagnosis
 ```
 
 ---
@@ -134,10 +149,12 @@ Key endpoints:
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
-- `POST /api/v1/auth/forgot-password`
+- `POST /api/v1/auth/request-reset`
 - `POST /api/v1/auth/reset-password`
 - `GET  /api/v1/athletes/me`
-- `WS   /ws` — chat, audio handlers
+- `POST /api/v1/chat/message` — typed chat; the mobile app uses this REST endpoint, not the WS `chat:send`
+  handler below (that handler exists and is registered, but no client currently calls it)
+- `WS   /ws` — `audio:*` handlers (Voice Chat, live), `chat:*` handlers (built, currently unused by the app)
 
 **JWT:** 15min access / 30d refresh. Payload: `{ userId, email, role, subscriptionPlan, isVerified, athleteId? }`
 
@@ -145,34 +162,47 @@ Key endpoints:
 
 ## Development Phases
 
+> **Note on this checklist (verified 2026-08-04):** an audit of every screen and backend route found Phases
+> 2–4 substantially built and live-wired already — this section had drifted badly out of date (it still
+> called Phase 2 "current" and Phases 3–4 "not started"). Checkboxes below now reflect what's actually
+> wired to the real backend/DB, not just present as a file. See "Known gaps" at the end of each phase for
+> the few things that are genuinely still mock/stub.
+
 ### Phase 1 — Foundation ✅ COMPLETE
 - [x] Auth screens: Login, Register, ForgotPassword, ResetPassword
 - [x] Backend API + WebSocket server
-- [x] Database schema (17 tables, Neon PostgreSQL)
+- [x] Database schema (20+ tables across 4 migrations, Neon PostgreSQL)
 - [x] AI service (Gemini)
 - [x] Email service (Resend)
 - [x] All 6 external services configured and live
 
-### Phase 2 — Core App Screens (MVP) ← CURRENT
-- [ ] Bottom tab navigator (Home / Training / Chat / Progress / Profile)
-- [ ] HomeScreen — dashboard: streak card, today's session, weekly ring, PB, AI insight
-- [ ] TrainingPlanScreen — day strip selector, drill list with expandable cues, complete session
-- [ ] ChatCoachScreen — WebSocket chat, streaming AI responses, user/AI bubbles
-- [ ] ProgressScreen — sub-tabs: PBs grid with sparkline, Log Time hero input, History
-- [ ] Wire all screens to live backend API
+### Phase 2 — Core App Screens (MVP) ✅ COMPLETE
+- [x] Bottom tab navigator — actual tabs: Dashboard ("Home") / Training / Progress / Chat / Profile
+      (`src/navigation/AthleteNavigator.tsx`)
+- [x] AthleteDashboardScreen — live plan/PB/session/profile data via `useTraining`/`profileApi`
+- [x] TrainingScreen — `trainingApi.getWeeklyPlan/completeSession/getSessionHistory`
+- [x] ChatScreen — `chatApi.getHistory/sendMessage`, live REST (not WS — see Backend API note below)
+- [x] ProgressScreen — `trainingApi.getPersonalBests/logPersonalBest`, PBs sub-tab includes the
+      dedicated PB timeline originally planned as a separate PersonalBestsScreen
+- [x] All Phase 2 screens wired to live backend API
+- [x] Dashboard "AI insight" card — real `GET /athletes/:athleteId/insight` (Gemini, 4h in-memory
+      cache per athlete); notification bell now opens Profile
 
-**MVP breakpoint:** All Phase 2 screens complete + tested on device → TestFlight submission
-
-### Phase 3 — Advanced Features
-- [ ] DiagnosisQuizScreen — weakness assessment flow
-- [ ] DiagnosisResultsScreen — AI-generated recommendations
-- [ ] PersonalBestsScreen — dedicated PB timeline
-- [ ] AchievementsScreen + BadgeGalleryScreen — gamification
-- [ ] Parent/Coach flows — account linking, coach notes
+### Phase 3 — Advanced Features ✅ COMPLETE
+- [x] DiagnosisQuizScreen — `diagnosisApi.runDiagnosis()` → real `/athletes/diagnosis`
+- [x] DiagnosisResultsScreen — renders the real diagnosis object from nav params
+- [x] AchievementsScreen — `achievementsApi.getAchievements()` → real `achievements` table; badge
+      gallery grid folded in here rather than a separate BadgeGalleryScreen
+- [x] Parent/Coach flows — separate `CoachStackNavigator`/`ParentStackNavigator` (2-tab + detail stack
+      each), account linking via `linksApi.redeemInvite`, coach notes, all live-wired
 
 ### Phase 4 — Monetisation & Launch
-- [ ] Paywall screen + RevenueCat SDK integration
-- [ ] Push notifications (expo-notifications)
+- [x] Paywall screen + RevenueCat SDK integration — real `react-native-purchases` purchase/restore flow
+      (`src/services/purchases.ts`), real webhook signature verification server-side
+- [x] Push notifications (expo-notifications) — permission flow, token registration, real triggers
+      (badge unlocks, coach notes, daily session reminders)
+- [x] AthleteProfileScreen's "Change Password" (real `request-reset` call) and "Notifications"
+      (real permission status + Settings deep-link) settings rows
 - [ ] App Store / Play Store submission via EAS
 - [ ] Production hardening (NODE_ENV=production, rate limits, monitoring)
 

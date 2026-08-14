@@ -14,8 +14,8 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
-import { getWeekStartDate, formatSessionType } from '@/utils/formatters';
-import { profileApi } from '@/api/training';
+import { getWeekStartDate, formatSessionType, safeLocaleDate } from '@/utils/formatters';
+import { profileApi, trainingApi } from '@/api/training';
 import type { AthleteTabParamList, AthleteStackParamList } from '@/navigation/types';
 
 const COLORS = {
@@ -39,6 +39,8 @@ export default function AthleteDashboardScreen() {
   const user = useAuthStore((s) => s.user);
   const { currentPlan, personalBests, sessions, loadWeeklyPlan, loadPersonalBests, loadSessionHistory, isLoading } = useTraining();
   const [needsRediagnosis, setNeedsRediagnosis] = React.useState(false);
+  const [insight, setInsight] = React.useState<string | null>(null);
+  const [insightLoading, setInsightLoading] = React.useState(true);
 
   useEffect(() => {
     loadWeeklyPlan(getWeekStartDate());
@@ -52,14 +54,19 @@ export default function AthleteDashboardScreen() {
       .catch(() => undefined);
   }, []);
 
+  const athleteId = user?.athleteId ?? user?.id;
+  useEffect(() => {
+    if (!athleteId) return;
+    setInsightLoading(true);
+    trainingApi.getInsight(athleteId)
+      .then(setInsight)
+      .catch(() => setInsight(null))
+      .finally(() => setInsightLoading(false));
+  }, [athleteId]);
+
   const firstName = user?.email?.split('@')[0] ?? 'Athlete';
   const today = new Date();
-  const dateStr = today.toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const dateStr = safeLocaleDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   const todayDay = currentPlan?.days[today.getDay() === 0 ? 6 : today.getDay() - 1];
 
@@ -96,7 +103,11 @@ export default function AthleteDashboardScreen() {
           </Text>
           <Text style={styles.date}>{dateStr}</Text>
         </View>
-        <TouchableOpacity style={styles.bellBtn} accessibilityLabel="Notifications">
+        <TouchableOpacity
+          style={styles.bellBtn}
+          accessibilityLabel="Notifications"
+          onPress={() => navigation.navigate('Profile')}
+        >
           <BellIcon />
         </TouchableOpacity>
       </View>
@@ -217,10 +228,14 @@ export default function AthleteDashboardScreen() {
             <RobotIcon />
             <Text style={styles.insightTitle}>Your Coach's Take</Text>
           </View>
-          <Text style={styles.insightBody}>
-            Your consistency has been excellent this week. Focus on explosive drive phase work today.
-          </Text>
-          <Text style={styles.insightFooter}>Updated today</Text>
+          {insightLoading ? (
+            <ActivityIndicator color={COLORS.primary} style={{ alignSelf: 'flex-start', marginVertical: 4 }} />
+          ) : (
+            <Text style={styles.insightBody}>
+              {insight ?? "Keep logging sessions and times — your coach's take will appear here once there's enough to go on."}
+            </Text>
+          )}
+          <Text style={styles.insightFooter}>{insight ? 'Updated today' : ' '}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
