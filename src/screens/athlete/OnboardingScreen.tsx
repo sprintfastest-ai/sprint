@@ -31,7 +31,7 @@ const COLORS = {
   error: '#C0392B',
 };
 
-const AGE_GROUPS = ['U11', 'U13', 'U15', 'U17', 'U20'];
+const AGE_GROUPS = ['U12', 'U14', 'U16', 'U18', 'U20'];
 const EVENTS = ['60m', '100m', '200m', '400m', '4×100m relay'];
 const TRAINING_DAYS = [2, 3, 4, 5, 6];
 const PB_DISTANCES: { label: string; value: number }[] = [

@@ -29,7 +29,7 @@ export const COLORS = {
   error:        '#C0392B',   // destructive / form errors
   /** Blue-tinted surface — drill cards, coach tip banners */
   blueLight:    '#EBF5FB',
-  /** Orange-tinted surface — U11 consent notice, warning banners */
+  /** Orange-tinted surface — under-13 consent notice, warning banners */
   orangeLight:  '#FEF3EC',
 
   // ── Borders ────────────────────────────────────────────────────────────────

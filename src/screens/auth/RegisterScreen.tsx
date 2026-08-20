@@ -124,7 +124,7 @@ export default function RegisterScreen() {
     }
   };
 
-  const showU11Banner = role === 'athlete' && ageGroup === 'U11';
+  const showUnder13Banner = role === 'athlete' && ageGroup === 'U12';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -295,14 +295,14 @@ export default function RegisterScreen() {
                 })}
               </View>
 
-              {/* U11 consent banner */}
-              {showU11Banner ? (
+              {/* Under-13 consent banner */}
+              {showUnder13Banner ? (
                 <View
-                  style={styles.u11Banner}
+                  style={styles.under13Banner}
                   accessibilityRole="alert"
                   accessibilityLiveRegion="polite"
                 >
-                  <Text style={styles.u11BannerText}>
+                  <Text style={styles.under13BannerText}>
                     ℹ️ A parent account will need to be linked before you can access training. You'll receive a link code after signing up.
                   </Text>
                 </View>
@@ -591,8 +591,8 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
 
-  // ── U11 banner — #FEF3EC bg, #F05A1A left border ─────────────────────────────
-  u11Banner: {
+  // ── Under-13 banner — #FEF3EC bg, #F05A1A left border ─────────────────────────
+  under13Banner: {
     backgroundColor: COLORS.bannerBg,
     borderLeftWidth: 3,
     borderLeftColor: COLORS.bannerBorder,
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
     marginBottom: SPACING.xs,
   },
-  u11BannerText: {
+  under13BannerText: {
     fontSize: 13,
     color: '#7A3B0E',
     lineHeight: 19,

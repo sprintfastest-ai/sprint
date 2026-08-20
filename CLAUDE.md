@@ -66,7 +66,7 @@ COLORS.border       = '#E0E0E0'   // Card borders, input outlines
 COLORS.surface      = '#FFFFFF'   // Card / sheet backgrounds
 COLORS.background   = '#F8F9FA'   // Screen background
 COLORS.blueLight    = '#EBF5FB'   // Info surface — drill cards, coach tips
-COLORS.orangeLight  = '#FEF3EC'   // Warning surface — banners, U11 notice
+COLORS.orangeLight  = '#FEF3EC'   // Warning surface — banners, under-13 (U12) notice
 COLORS.error        = '#C0392B'   // Destructive, form errors
 ```
 

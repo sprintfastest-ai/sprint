@@ -32,7 +32,7 @@ export const ERROR_CODES = {
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
-export const AGE_GROUPS = ['U11', 'U13', 'U15', 'U17', 'U20'] as const;
+export const AGE_GROUPS = ['U12', 'U14', 'U16', 'U18', 'U20'] as const;
 export const DISTANCES = [20, 30, 60, 100, 200] as const;
 export const WEAKNESS_TYPES = [
   'acceleration',

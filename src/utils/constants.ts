@@ -15,7 +15,7 @@ export const enum FEATURES {
   RE_DIAGNOSIS = 're_diagnosis',
 }
 
-export const AGE_GROUPS = ['U11', 'U13', 'U15', 'U17', 'U20'] as const;
+export const AGE_GROUPS = ['U12', 'U14', 'U16', 'U18', 'U20'] as const;
 export type AgeGroup = (typeof AGE_GROUPS)[number];
 
 export const DISTANCES = [20, 30, 60, 100, 200] as const;

@@ -30,7 +30,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  /** Set right after a U11 athlete registers — the code to give their parent. */
+  /** Set right after a U12 (under-13) athlete registers — the code to give their parent. */
   parentLinkCode: string | null;
 
   login: (email: string, password: string) => Promise<void>;

@@ -18,7 +18,7 @@ export interface AuthResponse {
   user: User;
   accessToken: string;
   refreshToken: string;
-  /** Only present for a freshly-registered U11 athlete — share with a parent. */
+  /** Only present for a freshly-registered U12 (under-13) athlete — share with a parent. */
   parentLinkCode?: string;
 }
 
