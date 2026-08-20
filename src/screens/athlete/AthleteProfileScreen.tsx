@@ -305,6 +305,8 @@ export default function AthleteProfileScreen() {
         <View style={styles.settingsCard}>
           <SettingsRow icon="ribbon-outline" label="Achievements" onPress={() => navigation.navigate('Achievements')} />
           <View style={styles.rowDivider} />
+          <SettingsRow icon="podium-outline" label="Leaderboard" onPress={() => navigation.navigate('Leaderboard')} />
+          <View style={styles.rowDivider} />
           <SettingsRow icon="flash-outline" label="Upgrade to Premium" onPress={() => navigation.navigate('Paywall', undefined)} />
           <View style={styles.rowDivider} />
           <SettingsRow icon="medical-outline" label="Retake Diagnosis" onPress={() => navigation.navigate('DiagnosisQuiz')} />

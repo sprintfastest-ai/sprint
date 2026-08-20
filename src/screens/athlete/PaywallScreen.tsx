@@ -30,13 +30,18 @@ const COLORS = {
   bg: '#F8F9FA',
 };
 
+// Every claim here must map to a real, server-enforced gate — verified
+// against backend/src/controllers/athleteController.ts, chatController.ts,
+// and audio.handler.ts. Parent & coach dashboards were removed from this
+// list: they're fully free today (no premium check anywhere in
+// linksController/parentController/coachController) — real, but not a
+// premium perk, so don't advertise it as one until that's actually gated.
 const PREMIUM_FEATURES: { icon: string; title: string; body: string }[] = [
-  { icon: 'infinite',           title: 'Unlimited training plans',  body: 'A new AI-generated plan every week, not just your first.' },
+  { icon: 'infinite',           title: 'Plan ahead & look back',      body: 'Free plans only cover this week — Premium unlocks past weeks and planning ahead.' },
   { icon: 'chatbubbles',        title: 'Unlimited AI Coach chat',    body: 'Ask your coach as many questions as you want, any time.' },
   { icon: 'medical',            title: 'Unlimited re-diagnosis',     body: 'Retake your weakness assessment as your training evolves.' },
   { icon: 'trending-up',        title: 'Race-taper plans',           body: 'Automatic taper weeks before every race on your calendar.' },
   { icon: 'podium',             title: 'Leaderboards',               body: 'See how you stack up against other athletes in your age group.' },
-  { icon: 'people',             title: 'Parent & coach dashboards',  body: 'Share progress with the people supporting your training.' },
 ];
 
 export default function PaywallScreen() {
