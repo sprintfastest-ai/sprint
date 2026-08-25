@@ -9,6 +9,8 @@ export interface AthleteProfile {
   primaryEvent: string | null;
   weaknessType: string | null;
   trainingDaysPerWeek: number | null;
+  /** 1 or 2 — whether the athlete sometimes trains twice in one day. Captured for profile completeness; not yet used by weekly plan generation. */
+  sessionsPerDay?: number;
   nextRaceDate?: string | null;
   weaknessDiagnosedAt?: string | null;
   streakCount?: number;
@@ -24,6 +26,7 @@ export interface ProfileUpdate {
   primaryEvent?: string;
   events?: string[];
   trainingDaysPerWeek?: number;
+  sessionsPerDay?: number;
   nextRaceDate?: string | null;
   onboardingCompleted?: boolean;
 }

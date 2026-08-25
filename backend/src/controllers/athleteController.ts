@@ -323,6 +323,7 @@ export async function getMyProfile(
     const { rows } = await pool.query(
       `SELECT ap.id AS "athleteId", ap.age_group AS "ageGroup", ap.primary_event AS "primaryEvent",
               ap.weakness_type AS "weaknessType", ap.training_days_per_week AS "trainingDaysPerWeek",
+              ap.sessions_per_day AS "sessionsPerDay",
               ap.next_race_date AS "nextRaceDate", ap.weakness_diagnosed_at AS "weaknessDiagnosedAt",
               ap.streak_count AS "streakCount", ap.longest_streak AS "longestStreak",
               ap.onboarding_completed AS "onboardingCompleted",
@@ -353,11 +354,12 @@ export async function updateMyProfile(
     const userId = req.user?.userId;
     if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
 
-    const { ageGroup, primaryEvent, events, trainingDaysPerWeek, nextRaceDate, onboardingCompleted } = req.body as {
+    const { ageGroup, primaryEvent, events, trainingDaysPerWeek, sessionsPerDay, nextRaceDate, onboardingCompleted } = req.body as {
       ageGroup?: string;
       primaryEvent?: string;
       events?: string[];
       trainingDaysPerWeek?: number;
+      sessionsPerDay?: number;
       nextRaceDate?: string | null;
       onboardingCompleted?: boolean;
     };
@@ -372,6 +374,7 @@ export async function updateMyProfile(
     if (ageGroup !== undefined) { updates.push(`age_group = $${idx++}`); values.push(ageGroup); }
     if (primaryEventValue !== undefined) { updates.push(`primary_event = $${idx++}`); values.push(primaryEventValue); }
     if (trainingDaysPerWeek !== undefined) { updates.push(`training_days_per_week = $${idx++}`); values.push(trainingDaysPerWeek); }
+    if (sessionsPerDay !== undefined) { updates.push(`sessions_per_day = $${idx++}`); values.push(sessionsPerDay); }
     if (nextRaceDate !== undefined) { updates.push(`next_race_date = $${idx++}`); values.push(nextRaceDate); }
     if (onboardingCompleted !== undefined) { updates.push(`onboarding_completed = $${idx++}`); values.push(onboardingCompleted); }
 
@@ -383,6 +386,7 @@ export async function updateMyProfile(
        WHERE user_id = $${idx}
        RETURNING id AS "athleteId", age_group AS "ageGroup", primary_event AS "primaryEvent",
                  weakness_type AS "weaknessType", training_days_per_week AS "trainingDaysPerWeek",
+                 sessions_per_day AS "sessionsPerDay",
                  next_race_date AS "nextRaceDate", onboarding_completed AS "onboardingCompleted"`,
       values,
     );

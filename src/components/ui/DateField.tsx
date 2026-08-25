@@ -81,6 +81,10 @@ export default function DateField({
           onChange={handleChange}
           minimumDate={minimumDate}
           maximumDate={maximumDate}
+          // British (day-first) format, matching the label above — has full
+          // effect on iOS; Android's native dialog follows the device's own
+          // system locale regardless, which this can't override.
+          locale="en-GB"
         />
       )}
 

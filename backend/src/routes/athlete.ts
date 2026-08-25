@@ -31,6 +31,7 @@ router.patch(
   body('events').optional().isArray({ max: 10 }).withMessage('events must be an array'),
   body('events.*').optional().isString().trim().isLength({ max: 30 }),
   body('trainingDaysPerWeek').optional().isInt({ min: 1, max: 7 }),
+  body('sessionsPerDay').optional().isInt({ min: 1, max: 2 }).withMessage('sessionsPerDay must be 1 or 2'),
   body('nextRaceDate').optional({ nullable: true }).isDate().withMessage('nextRaceDate must be YYYY-MM-DD'),
   body('onboardingCompleted').optional().isBoolean(),
   validate,
