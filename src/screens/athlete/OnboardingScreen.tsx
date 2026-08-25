@@ -16,6 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { profileApi, trainingApi } from '@/api/training';
 import { useAuthStore } from '@/store/authStore';
+import DateField from '@/components/ui/DateField';
 import type { RootStackParamList } from '@/navigation/types';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
@@ -57,17 +58,18 @@ export default function OnboardingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [prefillLoaded, setPrefillLoaded] = useState(false);
 
-  // Registration already collects age group / event / training days for most
-  // athletes — prefill them here and skip straight to the race date step
-  // instead of asking the same three questions again.
+  // Registration only collects age group now (kept there because it's what
+  // triggers the under-13 parental-consent gate at registration/login, before
+  // the athlete ever reaches this screen — see RegisterScreen). Everything
+  // else — events, training days, race date, starting PBs — is asked here
+  // for the first time, not re-asked. Prefill + skip past the age-group step
+  // since it's already known.
   useEffect(() => {
     profileApi.getMyProfile()
       .then((profile) => {
-        if (profile.ageGroup) setAgeGroup(profile.ageGroup);
-        if (profile.primaryEvent) setEvents(profile.primaryEvent.split(',').filter(Boolean));
-        if (profile.trainingDaysPerWeek) setTrainingDays(profile.trainingDaysPerWeek);
-        if (profile.ageGroup && profile.primaryEvent && profile.trainingDaysPerWeek) {
-          setStep(3);
+        if (profile.ageGroup) {
+          setAgeGroup(profile.ageGroup);
+          setStep(1);
         }
       })
       .catch(() => undefined)
@@ -84,7 +86,7 @@ export default function OnboardingScreen() {
     if (step === 0) return !!ageGroup;
     if (step === 1) return events.length > 0;
     if (step === 2) return !!trainingDays;
-    if (step === 3) return raceDate === '' || /^\d{4}-\d{2}-\d{2}$/.test(raceDate);
+    if (step === 3) return true; // optional — DateField only ever produces a valid ISO date or empty
     return true;
   };
 
@@ -217,14 +219,16 @@ export default function OnboardingScreen() {
                 Got a race on the calendar? We'll automatically taper your training the week before it.
                 Leave blank if not.
               </Text>
-              <TextInput
-                style={styles.dateInput}
-                value={raceDate}
-                onChangeText={setRaceDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={COLORS.grey}
-                keyboardType="numbers-and-punctuation"
-              />
+              <View style={{ width: '100%' }}>
+                <DateField
+                  value={raceDate || null}
+                  onChange={setRaceDate}
+                  onClear={() => setRaceDate('')}
+                  placeholder="Select race date"
+                  minimumDate={new Date()}
+                  accessibilityLabel="Upcoming race date"
+                />
+              </View>
             </View>
           )}
 
@@ -300,11 +304,6 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   pillText: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   pillTextActive: { color: '#fff' },
-  dateInput: {
-    width: '100%', borderWidth: 1, borderColor: COLORS.border, borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: COLORS.text,
-    textAlign: 'center',
-  },
   pbRow: {
     width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border,

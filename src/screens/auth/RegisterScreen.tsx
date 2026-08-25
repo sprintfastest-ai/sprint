@@ -30,27 +30,27 @@ const ROLES: Array<{ value: User['role']; label: string }> = [
   { value: 'coach',   label: 'Coach'   },
 ];
 
-const EVENTS = ['60m', '100m', '200m'] as const;
-type PrimaryEvent = (typeof EVENTS)[number];
-
 interface FieldErrors {
-  fullName?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
   clubName?: string;
 }
 
+// Registration only asks the minimum needed to create an account. Everything
+// else — primary event, training days, race date, starting PBs — is asked
+// once, in OnboardingScreen, instead of being asked here and then asked
+// again there. Age group is the one exception: it's kept here because it's
+// what triggers the under-13 parental-consent gate at registration/login,
+// before an athlete ever reaches onboarding (see auth.service.ts).
 function validate(
   role: User['role'],
-  fullName: string,
   email: string,
   password: string,
   confirmPassword: string,
   clubName: string,
 ): FieldErrors {
   const errs: FieldErrors = {};
-  if (!fullName.trim()) errs.fullName = 'Full name is required.';
   if (!email.trim() || !email.includes('@')) errs.email = 'Enter a valid email address.';
   if (password.length < 8) errs.password = 'Password must be at least 8 characters.';
   if (!/[A-Z]/.test(password)) errs.password = 'Password must contain at least one uppercase letter.';
@@ -70,17 +70,14 @@ export default function RegisterScreen() {
   const [role, setRole] = useState<User['role']>('athlete');
 
   // Common fields
-  const [fullName, setFullName]             = useState('');
   const [email, setEmail]                   = useState('');
   const [password, setPassword]             = useState('');
   const [confirmPassword, setConfirmPw]     = useState('');
   const [showPw, setShowPw]                 = useState(false);
   const [showConfirm, setShowConfirm]       = useState(false);
 
-  // Athlete-specific
+  // Athlete-specific — age group only, see comment on validate() above
   const [ageGroup, setAgeGroup]             = useState<string>('');
-  const [primaryEvent, setPrimaryEvent]     = useState<PrimaryEvent>('100m');
-  const [trainingDays, setTrainingDays]     = useState(3);
 
   // Coach-specific
   const [clubName, setClubName]             = useState('');
@@ -90,7 +87,7 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     clearError();
-    const errs = validate(role, fullName, email, password, confirmPassword, clubName);
+    const errs = validate(role, email, password, confirmPassword, clubName);
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
       return;
@@ -101,11 +98,7 @@ export default function RegisterScreen() {
       email: email.trim().toLowerCase(),
       password,
       role,
-      ...(role === 'athlete' && {
-        ageGroup: ageGroup || undefined,
-        primaryEvent: primaryEvent,
-        trainingDaysPerWeek: trainingDays,
-      }),
+      ...(role === 'athlete' && { ageGroup: ageGroup || undefined }),
       ...(role === 'coach' && { clubName: clubName.trim() }),
     };
 
@@ -177,23 +170,6 @@ export default function RegisterScreen() {
 
           {/* ── Common fields ── */}
           <View style={styles.card}>
-            {/* Full name */}
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={[styles.input, fieldErrors.fullName ? styles.inputError : null]}
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="e.g. Jordan Smith"
-              placeholderTextColor={COLORS.inputPlaceholder}
-              autoCapitalize="words"
-              autoComplete="name"
-              returnKeyType="next"
-              accessibilityLabel="Full name"
-            />
-            {fieldErrors.fullName ? (
-              <Text style={styles.fieldError}>{fieldErrors.fullName}</Text>
-            ) : null}
-
             {/* Email */}
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -307,54 +283,6 @@ export default function RegisterScreen() {
                   </Text>
                 </View>
               ) : null}
-
-              {/* Primary event */}
-              <Text style={[styles.label, { marginTop: SPACING.md }]}>Primary Event</Text>
-              <View style={styles.pillRow}>
-                {EVENTS.map((ev) => {
-                  const active = primaryEvent === ev;
-                  return (
-                    <TouchableOpacity
-                      key={ev}
-                      style={[styles.agePill, active && styles.pillActive]}
-                      onPress={() => setPrimaryEvent(ev)}
-                      accessibilityLabel={ev}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: active }}
-                    >
-                      <Text style={[styles.agePillText, active && styles.pillTextActive]}>
-                        {ev}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Training days stepper */}
-              <Text style={[styles.label, { marginTop: SPACING.md }]}>Training Days per Week</Text>
-              <View style={styles.stepper}>
-                <TouchableOpacity
-                  style={[styles.stepperBtn, trainingDays <= 1 && styles.stepperBtnDisabled]}
-                  onPress={() => setTrainingDays((d) => Math.max(1, d - 1))}
-                  disabled={trainingDays <= 1}
-                  accessibilityLabel="Decrease training days"
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.stepperBtnText}>−</Text>
-                </TouchableOpacity>
-                <Text style={styles.stepperValue} accessibilityLabel={`${trainingDays} days`}>
-                  {trainingDays}
-                </Text>
-                <TouchableOpacity
-                  style={[styles.stepperBtn, trainingDays >= 7 && styles.stepperBtnDisabled]}
-                  onPress={() => setTrainingDays((d) => Math.min(7, d + 1))}
-                  disabled={trainingDays >= 7}
-                  accessibilityLabel="Increase training days"
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.stepperBtnText}>+</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           ) : null}
 
@@ -606,38 +534,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#7A3B0E',
     lineHeight: 19,
-  },
-
-  // ── Stepper — #1A6BB5 circle buttons per Figma ───────────────────────────────
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    marginTop: SPACING.xs,
-  },
-  stepperBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primary,  // #1A6BB5
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperBtnDisabled: {
-    opacity: 0.35,
-  },
-  stepperBtnText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    lineHeight: 22,
-  },
-  stepperValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    minWidth: 28,
-    textAlign: 'center',
   },
 
   // ── API error banner ─────────────────────────────────────────────────────────
