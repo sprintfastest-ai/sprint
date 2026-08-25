@@ -197,7 +197,7 @@ export default function OnboardingScreen() {
           {step === 2 && (
             <View style={styles.stepBlock}>
               <Text style={styles.title}>Training Frequency</Text>
-              <Text style={styles.body}>How many days a week can you train?</Text>
+              <Text style={styles.body}>Approximately how many days a week can you train?</Text>
               <View style={styles.pillGrid}>
                 {TRAINING_DAYS.map((d) => (
                   <TouchableOpacity
