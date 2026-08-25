@@ -108,7 +108,7 @@ export async function sendParentConsentRequest(
     subject: 'SprintFastest — parent consent required',
     html: `
       <h2>Parent / guardian consent needed</h2>
-      <p>An account for <strong>${athleteEmail}</strong> (U11 age group) has been created on SprintFastest.</p>
+      <p>An account for <strong>${athleteEmail}</strong> (U12 age group) has been created on SprintFastest.</p>
       <p>Because this athlete is under 13, a parent or guardian must link their account before the athlete can sign in.</p>
       <p>Your link code: <strong>${linkCode}</strong></p>
       <p>This code expires in 48 hours. Enter it in the SprintFastest app under "Link Athlete".</p>

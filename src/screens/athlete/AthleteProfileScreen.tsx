@@ -38,7 +38,7 @@ const COLORS = {
   blueLight: '#EBF5FB',
 };
 
-const AGE_GROUPS = ['U11', 'U13', 'U15', 'U17', 'U20'];
+const AGE_GROUPS = ['U12', 'U14', 'U16', 'U18', 'U20'];
 const EVENTS = ['100m', '200m', '60m', '400m', '4×100m relay'];
 
 export default function AthleteProfileScreen() {
@@ -304,6 +304,8 @@ export default function AthleteProfileScreen() {
         {/* Achievements + upgrade */}
         <View style={styles.settingsCard}>
           <SettingsRow icon="ribbon-outline" label="Achievements" onPress={() => navigation.navigate('Achievements')} />
+          <View style={styles.rowDivider} />
+          <SettingsRow icon="podium-outline" label="Leaderboard" onPress={() => navigation.navigate('Leaderboard')} />
           <View style={styles.rowDivider} />
           <SettingsRow icon="flash-outline" label="Upgrade to Premium" onPress={() => navigation.navigate('Paywall', undefined)} />
           <View style={styles.rowDivider} />

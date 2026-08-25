@@ -21,6 +21,7 @@ import { generateWeeklyPlan, runDiagnosis, generateInsight } from '@/services/ai
 import { isPremium } from '@/db/queries/subscriptions';
 import { createLinkInvite } from '@/db/queries/links';
 import { notifyUser } from '@/services/push.service';
+import { getLeaderboard } from '@/db/queries/leaderboard';
 import pool from '@/db/pool';
 import type { PersonalBest, WeaknessType, Diagnosis } from '@/types';
 
@@ -387,6 +388,46 @@ export async function updateMyProfile(
     );
     if (!rows.length) throw new AppError('Profile not found', ERROR_CODES.NOT_FOUND, 404);
     sendSuccess(res, rows[0]);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Premium feature — see the Paywall's "Leaderboards" pitch. Always scoped to
+ * the requesting athlete's own age group and the current week; there's no
+ * arbitrary age-group/week query param to avoid exposing other cohorts'
+ * data to a user who isn't in them.
+ */
+export async function getMyLeaderboard(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401);
+
+    if (!(await isPremium(userId))) {
+      throw new AppError(
+        'Leaderboards are a Premium feature. Upgrade to see how you stack up against your age group.',
+        ERROR_CODES.PREMIUM_REQUIRED,
+        402,
+      );
+    }
+
+    const { rows } = await pool.query<{ athleteId: string; ageGroup: string | null }>(
+      `SELECT id AS "athleteId", age_group AS "ageGroup" FROM athlete_profiles WHERE user_id = $1 LIMIT 1`,
+      [userId],
+    );
+    const profile = rows[0];
+    if (!profile) throw new AppError('Athlete profile not found', ERROR_CODES.NOT_FOUND, 404);
+    if (!profile.ageGroup) {
+      throw new AppError('Set your age group in Profile to see your leaderboard.', ERROR_CODES.VALIDATION_ERROR, 400);
+    }
+
+    const leaderboard = await getLeaderboard(profile.ageGroup, currentWeekStartDate(), profile.athleteId);
+    sendSuccess(res, { ageGroup: profile.ageGroup, weekStartDate: currentWeekStartDate(), entries: leaderboard });
   } catch (err) {
     next(err);
   }

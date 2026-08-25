@@ -34,7 +34,10 @@ import logger from '@/utils/logger';
 import type { RegisterProfileData, UserRole, SubscriptionPlan } from '@/types';
 
 const BCRYPT_ROUNDS = 12;
-const UNDER_13_AGE_GROUP = 'U11';
+// U11 was removed as an age-group tier (app now starts at U12) — U12 is the
+// new youngest bracket and still includes children under 13, so the COPPA
+// parental-consent gate moves here rather than disappearing.
+const UNDER_13_AGE_GROUP = 'U12';
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
@@ -119,7 +122,7 @@ export async function register(
     }),
   );
 
-  // 5. Under-13 flow: generate a parent-link code immediately. A U11 athlete
+  // 5. Under-13 flow: generate a parent-link code immediately. A U12 athlete
   // can't log back in until a parent redeems this code (see login() below),
   // and they have no other authenticated way to request one — so it must be
   // handed back right here, in the registration response itself.

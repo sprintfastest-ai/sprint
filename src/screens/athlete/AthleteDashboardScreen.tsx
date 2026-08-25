@@ -66,7 +66,18 @@ export default function AthleteDashboardScreen() {
 
   const firstName = user?.email?.split('@')[0] ?? 'Athlete';
   const today = new Date();
-  const dateStr = safeLocaleDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  // Belt-and-braces on top of safeLocaleDate itself: this line runs
+  // unconditionally on every single Dashboard render for every user, so it
+  // must never be able to force-close the app — wrap the call site too,
+  // in case the failure is somehow in resolving safeLocaleDate rather than
+  // inside it (a plain `undefined()` call throws the same catchable
+  // TypeError either way).
+  let dateStr: string;
+  try {
+    dateStr = safeLocaleDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  } catch {
+    dateStr = today.toDateString();
+  }
 
   const todayDay = currentPlan?.days[today.getDay() === 0 ? 6 : today.getDay() - 1];
 
@@ -135,11 +146,15 @@ export default function AthleteDashboardScreen() {
           </View>
         </View>
 
-        {/* Quick links: badges + upgrade */}
+        {/* Quick links: badges, leaderboard, upgrade */}
         <View style={styles.quickLinksRow}>
           <TouchableOpacity style={styles.quickLink} onPress={() => stackNavigation.navigate('Achievements')}>
             <Ionicons name="ribbon" size={18} color={COLORS.orange} />
             <Text style={styles.quickLinkText}>Badges</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickLink} onPress={() => stackNavigation.navigate('Leaderboard')}>
+            <Ionicons name="podium" size={18} color={COLORS.green} />
+            <Text style={styles.quickLinkText}>Leaderboard</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickLink} onPress={() => stackNavigation.navigate('Paywall', undefined)}>
             <Ionicons name="flash" size={18} color={COLORS.primary} />

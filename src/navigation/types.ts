@@ -32,6 +32,7 @@ export type AthleteStackParamList = {
   DiagnosisQuiz: undefined;
   DiagnosisResults: { diagnosis: import('@/types').Diagnosis };
   Achievements: undefined;
+  Leaderboard: undefined;
   Paywall: { context?: string } | undefined;
 };
 

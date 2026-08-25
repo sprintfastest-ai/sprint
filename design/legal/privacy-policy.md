@@ -1,15 +1,19 @@
 # SprintFastest Privacy Policy
 
-**Last updated:** 16 July 2026
+**Last updated:** 14 August 2026
 
 > ⚠️ **Not legal advice.** This draft was written to accurately describe what
 > the SprintFastest app and backend actually do, based on the real codebase.
 > Because SprintFastest knowingly collects data from children under 13 (our
-> U11 age-group tier), this policy touches COPPA (US), UK GDPR/Data
+> U12 age-group tier), this policy touches COPPA (US), UK GDPR/Data
 > Protection Act 2018, and EU GDPR children's-data provisions. **Have a
 > lawyer review this before publishing** — company details below are filled
 > in, but a lawyer should still confirm the children's-privacy sections meet
-> your specific obligations in every region you operate in.
+> your specific obligations in every region you operate in. This age-group
+> change (U11 removed, U12 now youngest) is exactly the kind of material
+> update that may require re-notifying existing users depending on your
+> jurisdiction — flag it to your lawyer specifically, don't just swap the
+> date.
 
 ---
 
@@ -42,7 +46,7 @@ When you register, we collect:
 
 ### 2.2 Athlete profile information
 If you register as an athlete, we collect:
-- Age group (U11, U13, U15, U17, or U20)
+- Age group (U12, U14, U16, U18, or U20)
 - Primary event(s) you train for (e.g. 100m, 200m, 400m, relay)
 - How many days per week you train
 - Your next scheduled race date (optional, used to automatically adjust
@@ -200,10 +204,10 @@ chat history at any time (Section 9).
 ## 8. Children's privacy
 
 SprintFastest is used by young athletes across a range of ages, including
-children under 13 (our "U11" age group).
+children under 13 (our "U12" age group).
 
 - **Accounts for athletes under 13 require verifiable parental consent**
-  before the child can sign in and use the Service. A U11 athlete account
+  before the child can sign in and use the Service. A U12 athlete account
   is created but locked until a parent or guardian links their own
   SprintFastest account to it.
 - We collect only the information described in Section 2 that is

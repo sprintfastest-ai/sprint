@@ -14,6 +14,7 @@ import {
   updateMyProfile,
   getAchievements,
   getInsight,
+  getMyLeaderboard,
   createInvite,
 } from '@/controllers/athleteController';
 
@@ -22,9 +23,10 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/me', getMyProfile);
+router.get('/leaderboard', getMyLeaderboard);
 router.patch(
   '/me',
-  body('ageGroup').optional().isIn(['U11', 'U13', 'U15', 'U17', 'U20']).withMessage('Invalid age group'),
+  body('ageGroup').optional().isIn(['U12', 'U14', 'U16', 'U18', 'U20']).withMessage('Invalid age group'),
   body('primaryEvent').optional().isString().trim().isLength({ max: 50 }),
   body('events').optional().isArray({ max: 10 }).withMessage('events must be an array'),
   body('events.*').optional().isString().trim().isLength({ max: 30 }),
