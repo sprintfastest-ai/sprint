@@ -17,6 +17,8 @@ import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-n
 import { resetPassword } from '@/api/auth.api';
 import type { AuthStackParamList } from '@/navigation/types';
 import { COLORS, FONT, RADIUS, SPACING } from '@/utils/tokens';
+import { isPasswordStrong } from '@/utils/passwordStrength';
+import PasswordStrengthChecklist from '@/components/ui/PasswordStrengthChecklist';
 
 type NavProp   = NativeStackNavigationProp<AuthStackParamList, 'ResetPassword'>;
 type RouteProp = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>['route'];
@@ -38,14 +40,15 @@ export default function ResetPasswordScreen() {
   }>({});
   const [apiError, setApiError]         = useState<string | null>(null);
 
+  // Gates the submit button itself, not just the error shown after a failed
+  // attempt — the strongest way to ensure no one gets past this screen
+  // without a genuinely valid password.
+  const canSubmit = isPasswordStrong(newPassword) && newPassword === confirmPassword;
+
   const validate = (): boolean => {
     const errs: typeof fieldErrors = {};
-    if (newPassword.length < 8)
-      errs.newPassword = 'Password must be at least 8 characters.';
-    else if (!/[A-Z]/.test(newPassword))
-      errs.newPassword = 'Must contain at least one uppercase letter.';
-    else if (!/[0-9]/.test(newPassword))
-      errs.newPassword = 'Must contain at least one number.';
+    if (!isPasswordStrong(newPassword))
+      errs.newPassword = 'Password does not meet all the requirements below.';
     if (newPassword !== confirmPassword)
       errs.confirmPassword = 'Passwords do not match.';
     setFieldErrors(errs);
@@ -155,9 +158,7 @@ export default function ResetPasswordScreen() {
                     <Text style={styles.eyeText}>{showNew ? 'Hide' : 'Show'}</Text>
                   </TouchableOpacity>
                 </View>
-                {fieldErrors.newPassword ? (
-                  <Text style={styles.fieldError}>{fieldErrors.newPassword}</Text>
-                ) : null}
+                <PasswordStrengthChecklist password={newPassword} />
 
                 {/* Confirm password */}
                 <Text style={styles.label}>Confirm Password</Text>
@@ -205,12 +206,12 @@ export default function ResetPasswordScreen() {
                 ) : null}
 
                 <TouchableOpacity
-                  style={[styles.submitBtn, isLoading && styles.btnDisabled]}
+                  style={[styles.submitBtn, (isLoading || !canSubmit) && styles.btnDisabled]}
                   onPress={handleSubmit}
-                  disabled={isLoading}
+                  disabled={isLoading || !canSubmit}
                   accessibilityLabel="Set new password"
                   accessibilityRole="button"
-                  accessibilityState={{ disabled: isLoading, busy: isLoading }}
+                  accessibilityState={{ disabled: isLoading || !canSubmit, busy: isLoading }}
                 >
                   {isLoading ? (
                     <ActivityIndicator size="small" color="#fff" />

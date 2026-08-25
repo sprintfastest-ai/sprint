@@ -27,11 +27,25 @@ export interface AuthResponse {
 /**
  * Creates a new account. Returns tokens + the newly created user.
  * Caller is responsible for persisting tokens (auth store does this).
+ *
+ * The backend expects role-specific fields nested under `profileData`
+ * (see backend/src/controllers/auth.controller.ts's registerHandler and
+ * middleware/validate.ts's validateRegister, both of which read
+ * profileData.ageGroup etc., not top-level ageGroup). RegisterPayload
+ * stays flat for the caller's convenience — the nesting is done here,
+ * at the wire boundary, rather than asking every caller to know the
+ * backend's request shape.
  */
 export async function register(data: RegisterPayload): Promise<AuthResponse> {
+  const { email, password, role, ageGroup, primaryEvent, trainingDaysPerWeek, clubName } = data;
   const { data: body } = await client.post<{ data: AuthResponse }>(
     '/auth/register',
-    data,
+    {
+      email,
+      password,
+      role,
+      profileData: { ageGroup, primaryEvent, trainingDaysPerWeek, clubName },
+    },
   );
   return body.data;
 }
