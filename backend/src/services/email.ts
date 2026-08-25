@@ -34,7 +34,11 @@ export async function sendPasswordReset(
   to: string,
   resetToken: string,
 ): Promise<void> {
-  const resetUrl = `${process.env.APP_URL ?? 'https://app.sprintfastest.com'}/reset-password?token=${resetToken}`;
+  // No companion website exists at app.sprintfastest.com, so this deep-links
+  // straight into the mobile app via its custom URL scheme (registered as
+  // "scheme": "sprintfastest" in app.json, handled by the linking config in
+  // src/App.tsx) rather than pointing at a web page that doesn't exist.
+  const resetUrl = `sprintfastest://reset-password?token=${resetToken}`;
   await send({
     from: process.env.EMAIL_FROM,
     to,
