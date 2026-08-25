@@ -16,6 +16,9 @@
       "bundleIdentifier": "com.sprintfastest.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "SprintFastest uses your microphone so you can talk to your AI coach in Voice Chat (beta)."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
