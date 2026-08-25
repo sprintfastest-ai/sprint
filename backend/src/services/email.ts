@@ -87,7 +87,10 @@ export async function sendVerificationEmail(
   to: string,
   token: string,
 ): Promise<void> {
-  const url = `${process.env.APP_URL ?? 'https://app.sprintfastest.com'}/verify-email?token=${token}`;
+  // Same reasoning as sendPasswordReset above: no website exists at
+  // app.sprintfastest.com, so this deep-links into VerifyEmailScreen via
+  // the app's custom URL scheme instead.
+  const url = `sprintfastest://verify-email?token=${token}`;
   await send({
     from: process.env.EMAIL_FROM,
     to,
