@@ -34,7 +34,11 @@ export async function sendPasswordReset(
   to: string,
   resetToken: string,
 ): Promise<void> {
-  const resetUrl = `${process.env.APP_URL ?? 'https://app.sprintfastest.com'}/reset-password?token=${resetToken}`;
+  // No companion website exists at app.sprintfastest.com, so this deep-links
+  // straight into the mobile app via its custom URL scheme (registered as
+  // "scheme": "sprintfastest" in app.json, handled by the linking config in
+  // src/App.tsx) rather than pointing at a web page that doesn't exist.
+  const resetUrl = `sprintfastest://reset-password?token=${resetToken}`;
   await send({
     from: process.env.EMAIL_FROM,
     to,
@@ -83,7 +87,10 @@ export async function sendVerificationEmail(
   to: string,
   token: string,
 ): Promise<void> {
-  const url = `${process.env.APP_URL ?? 'https://app.sprintfastest.com'}/verify-email?token=${token}`;
+  // Same reasoning as sendPasswordReset above: no website exists at
+  // app.sprintfastest.com, so this deep-links into VerifyEmailScreen via
+  // the app's custom URL scheme instead.
+  const url = `sprintfastest://verify-email?token=${token}`;
   await send({
     from: process.env.EMAIL_FROM,
     to,

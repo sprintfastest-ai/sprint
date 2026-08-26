@@ -21,6 +21,8 @@ import type { AuthStackParamList } from '@/navigation/types';
 import type { User } from '@/types';
 import { AGE_GROUPS } from '@/utils/constants';
 import { COLORS, FONT, RADIUS, SPACING } from '@/utils/tokens';
+import { isPasswordStrong } from '@/utils/passwordStrength';
+import PasswordStrengthChecklist from '@/components/ui/PasswordStrengthChecklist';
 
 type NavProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -52,9 +54,7 @@ function validate(
 ): FieldErrors {
   const errs: FieldErrors = {};
   if (!email.trim() || !email.includes('@')) errs.email = 'Enter a valid email address.';
-  if (password.length < 8) errs.password = 'Password must be at least 8 characters.';
-  if (!/[A-Z]/.test(password)) errs.password = 'Password must contain at least one uppercase letter.';
-  if (!/[0-9]/.test(password)) errs.password = 'Password must contain at least one number.';
+  if (!isPasswordStrong(password)) errs.password = 'Password does not meet all the requirements below.';
   if (password !== confirmPassword) errs.confirmPassword = 'Passwords do not match.';
   if (role === 'coach' && !clubName.trim()) errs.clubName = 'Club or school name is required.';
   return errs;
@@ -84,6 +84,11 @@ export default function RegisterScreen() {
 
   // Validation
   const [fieldErrors, setFieldErrors]       = useState<FieldErrors>({});
+
+  // Gates the submit button itself, not just the error shown after a failed
+  // attempt — the strongest way to ensure no one gets past this screen
+  // without a genuinely valid password.
+  const canSubmit = isPasswordStrong(password) && password === confirmPassword;
 
   const handleRegister = async () => {
     clearError();
@@ -212,9 +217,7 @@ export default function RegisterScreen() {
                 <Text style={styles.eyeText}>{showPw ? 'Hide' : 'Show'}</Text>
               </TouchableOpacity>
             </View>
-            {fieldErrors.password ? (
-              <Text style={styles.fieldError}>{fieldErrors.password}</Text>
-            ) : null}
+            <PasswordStrengthChecklist password={password} />
 
             {/* Confirm password */}
             <Text style={styles.label}>Confirm Password</Text>
@@ -316,12 +319,12 @@ export default function RegisterScreen() {
 
           {/* Create Account CTA — #F05A1A orange per Figma */}
           <TouchableOpacity
-            style={[styles.createBtn, isLoading && styles.btnDisabled]}
+            style={[styles.createBtn, (isLoading || !canSubmit) && styles.btnDisabled]}
             onPress={handleRegister}
-            disabled={isLoading}
+            disabled={isLoading || !canSubmit}
             accessibilityLabel="Create your SprintFastest account"
             accessibilityRole="button"
-            accessibilityState={{ disabled: isLoading, busy: isLoading }}
+            accessibilityState={{ disabled: isLoading || !canSubmit, busy: isLoading }}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color="#fff" />

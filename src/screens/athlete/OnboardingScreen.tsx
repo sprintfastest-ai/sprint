@@ -34,7 +34,11 @@ const COLORS = {
 
 const AGE_GROUPS = ['U12', 'U14', 'U16', 'U18', 'U20'];
 const EVENTS = ['60m', '100m', '200m', '400m', '4×100m relay'];
-const TRAINING_DAYS = [2, 3, 4, 5, 6];
+const TRAINING_DAYS = [1, 2, 3, 4, 5, 6];
+const SESSIONS_PER_DAY: { label: string; value: number }[] = [
+  { label: 'Once a day', value: 1 },
+  { label: 'Twice on some days', value: 2 },
+];
 const PB_DISTANCES: { label: string; value: number }[] = [
   { label: '20m', value: 20 },
   { label: '60m', value: 60 },
@@ -52,6 +56,7 @@ export default function OnboardingScreen() {
   const [ageGroup, setAgeGroup] = useState<string | null>(null);
   const [events, setEvents] = useState<string[]>([]);
   const [trainingDays, setTrainingDays] = useState<number | null>(null);
+  const [sessionsPerDay, setSessionsPerDay] = useState<number>(1);
   const [raceDate, setRaceDate] = useState('');
   const [pbInputs, setPbInputs] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
@@ -111,6 +116,7 @@ export default function OnboardingScreen() {
         ageGroup: ageGroup as string,
         events,
         trainingDaysPerWeek: trainingDays as number,
+        sessionsPerDay,
         nextRaceDate: raceDate || null,
         onboardingCompleted: true,
       });
@@ -197,7 +203,7 @@ export default function OnboardingScreen() {
           {step === 2 && (
             <View style={styles.stepBlock}>
               <Text style={styles.title}>Training Frequency</Text>
-              <Text style={styles.body}>How many days a week can you train?</Text>
+              <Text style={styles.body}>Approximately how many days a week can you train?</Text>
               <View style={styles.pillGrid}>
                 {TRAINING_DAYS.map((d) => (
                   <TouchableOpacity
@@ -205,7 +211,22 @@ export default function OnboardingScreen() {
                     style={[styles.pill, trainingDays === d && styles.pillActive]}
                     onPress={() => setTrainingDays(d)}
                   >
-                    <Text style={[styles.pillText, trainingDays === d && styles.pillTextActive]}>{d} days</Text>
+                    <Text style={[styles.pillText, trainingDays === d && styles.pillTextActive]}>{d} day{d !== 1 ? 's' : ''}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={[styles.body, { marginTop: 24, marginBottom: 12 }]}>
+                On your training days, is it usually once, or sometimes twice a day?
+              </Text>
+              <View style={styles.pillGrid}>
+                {SESSIONS_PER_DAY.map((s) => (
+                  <TouchableOpacity
+                    key={s.value}
+                    style={[styles.pill, sessionsPerDay === s.value && styles.pillActive]}
+                    onPress={() => setSessionsPerDay(s.value)}
+                  >
+                    <Text style={[styles.pillText, sessionsPerDay === s.value && styles.pillTextActive]}>{s.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

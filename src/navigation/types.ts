@@ -16,6 +16,8 @@ export type AuthStackParamList = {
   ForgotPassword: undefined;
   /** token comes from the deep-link query param ?token=<jwt> */
   ResetPassword: { token: string };
+  /** token comes from the deep-link query param ?token=<jwt> */
+  VerifyEmail: { token: string };
 };
 
 export type AthleteTabParamList = {
