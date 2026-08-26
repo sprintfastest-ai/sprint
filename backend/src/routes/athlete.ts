@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import { validate } from '@/middleware/validate';
 import { authenticate } from '@/middleware/auth';
+import { AGE_GROUPS, DISTANCES } from '@/utils/constants';
 import {
   getWeeklyPlan,
   completeSession,
@@ -26,7 +27,7 @@ router.get('/me', getMyProfile);
 router.get('/leaderboard', getMyLeaderboard);
 router.patch(
   '/me',
-  body('ageGroup').optional().isIn(['U12', 'U14', 'U16', 'U18', 'U20']).withMessage('Invalid age group'),
+  body('ageGroup').optional().isIn([...AGE_GROUPS]).withMessage('Invalid age group'),
   body('primaryEvent').optional().isString().trim().isLength({ max: 50 }),
   body('events').optional().isArray({ max: 10 }).withMessage('events must be an array'),
   body('events.*').optional().isString().trim().isLength({ max: 30 }),
@@ -65,7 +66,10 @@ router.get('/:athleteId/pbs', athleteIdParam, validate, getPersonalBests);
 router.post(
   '/:athleteId/pbs',
   athleteIdParam,
-  body('distance').isFloat({ min: 1 }).withMessage('distance required'),
+  body('distance')
+    .isFloat({ min: 1 })
+    .custom((v) => (DISTANCES as readonly number[]).includes(Number(v)))
+    .withMessage(`distance must be one of: ${DISTANCES.join(', ')}`),
   body('timeSeconds').isFloat({ min: 0.1 }).withMessage('timeSeconds required'),
   validate,
   logPersonalBest,

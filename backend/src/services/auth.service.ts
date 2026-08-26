@@ -29,15 +29,11 @@ import {
   sendParentConsentRequest,
 } from '@/services/email';
 import { AppError } from '@/middleware/errorHandler';
-import { ERROR_CODES } from '@/utils/constants';
+import { ERROR_CODES, UNDER_13_AGE_GROUPS } from '@/utils/constants';
 import logger from '@/utils/logger';
 import type { RegisterProfileData, UserRole, SubscriptionPlan } from '@/types';
 
 const BCRYPT_ROUNDS = 12;
-// U11 was removed as an age-group tier (app now starts at U12) — U12 is the
-// new youngest bracket and still includes children under 13, so the COPPA
-// parental-consent gate moves here rather than disappearing.
-const UNDER_13_AGE_GROUP = 'U12';
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
@@ -64,7 +60,7 @@ export async function register(
   const verificationToken = crypto.randomBytes(32).toString('hex');
 
   const isUnder13Athlete =
-    role === 'athlete' && profileData.ageGroup === UNDER_13_AGE_GROUP;
+    role === 'athlete' && !!profileData.ageGroup && UNDER_13_AGE_GROUPS.includes(profileData.ageGroup);
 
   let createdUser: Awaited<ReturnType<typeof createUser>>;
   let athleteProfileId: string | undefined;
@@ -186,7 +182,7 @@ export async function login(
   // Under-13 block: athlete must have an active parent link before they can log in
   if (user.role === 'athlete') {
     const athleteProfile = await findAthleteProfileByUserId(user.id);
-    if (athleteProfile?.age_group === UNDER_13_AGE_GROUP) {
+    if (athleteProfile?.age_group && UNDER_13_AGE_GROUPS.includes(athleteProfile.age_group)) {
       const { rows } = await import('@/db/pool').then((m) => m.default).then((pool) =>
         pool.query(
           `SELECT 1 FROM parent_athlete_links

@@ -19,7 +19,7 @@ import { useAuthStore } from '@/store/authStore';
 import type { RegisterPayload } from '@/api/auth.api';
 import type { AuthStackParamList } from '@/navigation/types';
 import type { User } from '@/types';
-import { AGE_GROUPS } from '@/utils/constants';
+import { AGE_GROUP_PRIMARY_OPTIONS, MASTERS_TIERS, isMastersTier, UNDER_13_AGE_GROUPS } from '@/utils/constants';
 import { COLORS, FONT, RADIUS, SPACING } from '@/utils/tokens';
 import { isPasswordStrong } from '@/utils/passwordStrength';
 import PasswordStrengthChecklist from '@/components/ui/PasswordStrengthChecklist';
@@ -78,6 +78,10 @@ export default function RegisterScreen() {
 
   // Athlete-specific — age group only, see comment on validate() above
   const [ageGroup, setAgeGroup]             = useState<string>('');
+  // Masters spans a wide range, so it's a two-step pick: "Masters" first,
+  // then a specific V-tier below it. `ageGroup` only ever ends up holding
+  // the resolved tier (e.g. 'V45') — the literal "Masters" is never stored.
+  const [showMastersTiers, setShowMastersTiers] = useState(false);
 
   // Coach-specific
   const [clubName, setClubName]             = useState('');
@@ -122,7 +126,7 @@ export default function RegisterScreen() {
     }
   };
 
-  const showUnder13Banner = role === 'athlete' && ageGroup === 'U12';
+  const showUnder13Banner = role === 'athlete' && UNDER_13_AGE_GROUPS.includes(ageGroup);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -255,13 +259,20 @@ export default function RegisterScreen() {
               {/* Age group */}
               <Text style={styles.label}>Age Group</Text>
               <View style={styles.pillRow}>
-                {AGE_GROUPS.map((ag) => {
-                  const active = ageGroup === ag;
+                {AGE_GROUP_PRIMARY_OPTIONS.map((ag) => {
+                  const active = ag === 'Masters' ? (showMastersTiers || isMastersTier(ageGroup)) : ageGroup === ag;
                   return (
                     <TouchableOpacity
                       key={ag}
                       style={[styles.agePill, active && styles.pillActive]}
-                      onPress={() => setAgeGroup(ag)}
+                      onPress={() => {
+                        if (ag === 'Masters') {
+                          setShowMastersTiers(true);
+                        } else {
+                          setShowMastersTiers(false);
+                          setAgeGroup(ag);
+                        }
+                      }}
                       accessibilityLabel={ag}
                       accessibilityRole="radio"
                       accessibilityState={{ selected: active }}
@@ -273,6 +284,32 @@ export default function RegisterScreen() {
                   );
                 })}
               </View>
+
+              {/* Masters V-tier — second step, only shown after "Masters" is picked */}
+              {(showMastersTiers || isMastersTier(ageGroup)) ? (
+                <>
+                  <Text style={[styles.label, { marginTop: SPACING.sm }]}>Masters Age Band</Text>
+                  <View style={styles.pillRow}>
+                    {MASTERS_TIERS.map((tier) => {
+                      const active = ageGroup === tier;
+                      return (
+                        <TouchableOpacity
+                          key={tier}
+                          style={[styles.agePill, active && styles.pillActive]}
+                          onPress={() => setAgeGroup(tier)}
+                          accessibilityLabel={tier}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: active }}
+                        >
+                          <Text style={[styles.agePillText, active && styles.pillTextActive]}>
+                            {tier}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
 
               {/* Under-13 consent banner */}
               {showUnder13Banner ? (

@@ -13,6 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '@/store/authStore';
 import { trainingApi } from '@/api/training';
 import { safeLocaleDate } from '@/utils/formatters';
+import { DISTANCES as DISTANCE_VALUES } from '@/utils/constants';
 import type { PersonalBest } from '@/types';
 
 const COLORS = {
@@ -27,8 +28,7 @@ const COLORS = {
   blueLight: '#EBF5FB',
 };
 
-const DISTANCES = ['20m', '30m', '60m', '100m', '200m', '400m'];
-const DISTANCE_VALUES = [20, 30, 60, 100, 200, 400];
+const DISTANCES = DISTANCE_VALUES.map((d) => `${d}m`);
 const SUB_TABS = ['PBs', 'Log Time', 'History'];
 
 export default function ProgressScreen() {
@@ -324,7 +324,11 @@ function LogTimeTab(props: LogTimeProps) {
 
   return (
     <>
-      <View style={styles.distRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.distRow}
+      >
         {DISTANCES.map((d, i) => (
           <TouchableOpacity
             key={d}
@@ -334,7 +338,7 @@ function LogTimeTab(props: LogTimeProps) {
             <Text style={[styles.distPillText, distIdx === i && styles.distPillTextActive]}>{d}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       <Text style={styles.pbCaption}>
         {DISTANCES[distIdx]} PB: {currentPbText}
@@ -542,10 +546,13 @@ const styles = StyleSheet.create({
   addBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
   addBtnIcon: { fontSize: 20, color: COLORS.primary, lineHeight: 24 },
 
+  // Horizontally scrollable now that there are 8 distances — a fixed
+  // non-scrolling row of flex:1 pills got too cramped to read past ~6.
   distRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   distPill: {
-    flex: 1,
+    minWidth: 56,
     height: 36,
+    paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,

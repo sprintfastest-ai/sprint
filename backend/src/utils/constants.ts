@@ -32,8 +32,21 @@ export const ERROR_CODES = {
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
-export const AGE_GROUPS = ['U12', 'U14', 'U16', 'U18', 'U20'] as const;
-export const DISTANCES = [20, 30, 60, 100, 200] as const;
+// Masters is a UI-only grouping step on the frontend (pick "Masters", then
+// a specific V-tier) — the literal string "Masters" is never stored or
+// sent to the API, only the resolved tier (e.g. 'V45'), so it doesn't
+// appear here. Keep in sync with src/utils/constants.ts on the frontend.
+const MASTERS_TIERS = [
+  'V35', 'V40', 'V45', 'V50', 'V55', 'V60', 'V65', 'V70', 'V75', 'V80', 'V85', 'V90', 'V95', 'V100+',
+] as const;
+export const AGE_GROUPS = ['U10', 'U12', 'U14', 'U16', 'U18', 'U20', 'Senior', ...MASTERS_TIERS] as const;
+
+// Age groups that trigger the under-13 parental-consent gate (see
+// auth.service.ts). U10 is obviously under 13; U12 covers ages up to 12,
+// which can still be under 13.
+export const UNDER_13_AGE_GROUPS: readonly string[] = ['U10', 'U12'];
+
+export const DISTANCES = [60, 75, 80, 100, 150, 200, 300, 400] as const;
 export const WEAKNESS_TYPES = [
   'acceleration',
   'top_speed',

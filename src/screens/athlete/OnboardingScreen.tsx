@@ -18,6 +18,7 @@ import { profileApi, trainingApi } from '@/api/training';
 import { useAuthStore } from '@/store/authStore';
 import DateField from '@/components/ui/DateField';
 import type { RootStackParamList } from '@/navigation/types';
+import { AGE_GROUP_PRIMARY_OPTIONS, MASTERS_TIERS, isMastersTier, DISTANCES } from '@/utils/constants';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
 
@@ -32,19 +33,13 @@ const COLORS = {
   error: '#C0392B',
 };
 
-const AGE_GROUPS = ['U12', 'U14', 'U16', 'U18', 'U20'];
-const EVENTS = ['60m', '100m', '200m', '400m', '4×100m relay'];
+const EVENTS = DISTANCES.map((d) => `${d}m`);
 const TRAINING_DAYS = [1, 2, 3, 4, 5, 6];
 const SESSIONS_PER_DAY: { label: string; value: number }[] = [
   { label: 'Once a day', value: 1 },
   { label: 'Twice on some days', value: 2 },
 ];
-const PB_DISTANCES: { label: string; value: number }[] = [
-  { label: '20m', value: 20 },
-  { label: '60m', value: 60 },
-  { label: '100m', value: 100 },
-  { label: '200m', value: 200 },
-];
+const PB_DISTANCES: { label: string; value: number }[] = DISTANCES.map((d) => ({ label: `${d}m`, value: d }));
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -54,6 +49,10 @@ export default function OnboardingScreen() {
 
   const [step, setStep] = useState<Step>(0);
   const [ageGroup, setAgeGroup] = useState<string | null>(null);
+  // Masters spans a wide range, so it's a two-step pick: "Masters" first,
+  // then a specific V-tier below it. `ageGroup` only ever ends up holding
+  // the resolved tier (e.g. 'V45') — the literal "Masters" is never stored.
+  const [showMastersTiers, setShowMastersTiers] = useState(false);
   const [events, setEvents] = useState<string[]>([]);
   const [trainingDays, setTrainingDays] = useState<number | null>(null);
   const [sessionsPerDay, setSessionsPerDay] = useState<number>(1);
@@ -74,6 +73,7 @@ export default function OnboardingScreen() {
       .then((profile) => {
         if (profile.ageGroup) {
           setAgeGroup(profile.ageGroup);
+          if (isMastersTier(profile.ageGroup)) setShowMastersTiers(true);
           setStep(1);
         }
       })
@@ -169,16 +169,45 @@ export default function OnboardingScreen() {
               <Text style={styles.title}>Welcome to SprintFastest!</Text>
               <Text style={styles.body}>What's your age group?</Text>
               <View style={styles.pillGrid}>
-                {AGE_GROUPS.map((g) => (
-                  <TouchableOpacity
-                    key={g}
-                    style={[styles.pill, ageGroup === g && styles.pillActive]}
-                    onPress={() => setAgeGroup(g)}
-                  >
-                    <Text style={[styles.pillText, ageGroup === g && styles.pillTextActive]}>{g}</Text>
-                  </TouchableOpacity>
-                ))}
+                {AGE_GROUP_PRIMARY_OPTIONS.map((g) => {
+                  const active = g === 'Masters' ? (showMastersTiers || isMastersTier(ageGroup)) : ageGroup === g;
+                  return (
+                    <TouchableOpacity
+                      key={g}
+                      style={[styles.pill, active && styles.pillActive]}
+                      onPress={() => {
+                        if (g === 'Masters') {
+                          setShowMastersTiers(true);
+                        } else {
+                          setShowMastersTiers(false);
+                          setAgeGroup(g);
+                        }
+                      }}
+                    >
+                      <Text style={[styles.pillText, active && styles.pillTextActive]}>{g}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
+
+              {(showMastersTiers || isMastersTier(ageGroup)) ? (
+                <>
+                  <Text style={[styles.body, { marginTop: 20, marginBottom: 12 }]}>
+                    Which Masters age band?
+                  </Text>
+                  <View style={styles.pillGrid}>
+                    {MASTERS_TIERS.map((tier) => (
+                      <TouchableOpacity
+                        key={tier}
+                        style={[styles.pill, ageGroup === tier && styles.pillActive]}
+                        onPress={() => setAgeGroup(tier)}
+                      >
+                        <Text style={[styles.pillText, ageGroup === tier && styles.pillTextActive]}>{tier}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              ) : null}
             </View>
           )}
 
