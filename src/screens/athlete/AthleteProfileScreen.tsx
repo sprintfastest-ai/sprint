@@ -109,7 +109,7 @@ export default function AthleteProfileScreen() {
 
   const sessionCount = sessions.length;
   const pb100m = personalBests.find((pb) => pb.distance === 100);
-  const pb100mStr = pb100m ? `${pb100m.timeSeconds.toFixed(2)}s` : '–';
+  const pb100mStr = pb100m ? `${Number(pb100m.timeSeconds).toFixed(2)}s` : '–';
   const streak = (() => {
     if (!sessions.length) return 0;
     const days = new Set(sessions.map((s) => new Date(s.completedAt).toDateString()));
