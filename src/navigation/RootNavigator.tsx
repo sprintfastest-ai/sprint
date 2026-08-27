@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { setOnSignOut } from '@/api/client';
 import { usePushRegistration } from '@/hooks/usePushRegistration';
+import { usePurchasesConfiguration } from '@/hooks/usePurchasesConfiguration';
 import type { RootStackParamList } from './types';
 import AuthNavigator from './AuthNavigator';
 import AthleteStackNavigator from './AthleteStackNavigator';
@@ -32,6 +33,7 @@ export default function RootNavigator() {
   }, [restoreSession]);
 
   usePushRegistration(isAuthenticated);
+  usePurchasesConfiguration(user?.email);
 
   // Show a full-screen spinner while we determine auth state on cold start.
   // This prevents a flash of the login screen for users with a valid session.
