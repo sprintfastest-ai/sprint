@@ -22,6 +22,7 @@ import { linksApi } from '@/api/links';
 import { requestPasswordReset } from '@/api/auth.api';
 import type { AthleteProfile } from '@/api/training';
 import type { AthleteStackParamList } from '@/navigation/types';
+import { AGE_GROUP_PRIMARY_OPTIONS, MASTERS_TIERS, isMastersTier, DISTANCES } from '@/utils/constants';
 
 type StackNavProp = NativeStackNavigationProp<AthleteStackParamList>;
 
@@ -38,8 +39,7 @@ const COLORS = {
   blueLight: '#EBF5FB',
 };
 
-const AGE_GROUPS = ['U12', 'U14', 'U16', 'U18', 'U20'];
-const EVENTS = ['100m', '200m', '60m', '400m', '4×100m relay'];
+const EVENTS = DISTANCES.map((d) => `${d}m`);
 
 export default function AthleteProfileScreen() {
   const navigation = useNavigation<StackNavProp>();
@@ -49,13 +49,19 @@ export default function AthleteProfileScreen() {
   const [profile, setProfile] = useState<AthleteProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Masters spans a wide range, so it's a two-step pick: "Masters" first,
+  // then a specific V-tier below it — the literal "Masters" is never stored.
+  const [showMastersTiers, setShowMastersTiers] = useState(false);
   const { sessions, personalBests, loadSessionHistory, loadPersonalBests } = useTraining();
 
   useEffect(() => {
     loadSessionHistory();
     loadPersonalBests();
     profileApi.getMyProfile()
-      .then(setProfile)
+      .then((p) => {
+        setProfile(p);
+        if (isMastersTier(p.ageGroup)) setShowMastersTiers(true);
+      })
       .catch(() => null)
       .finally(() => setProfileLoading(false));
   }, [loadSessionHistory, loadPersonalBests]);
@@ -243,21 +249,48 @@ export default function AthleteProfileScreen() {
           {profileLoading ? (
             <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 4 }} />
           ) : (
-            <View style={styles.pillRow}>
-              {AGE_GROUPS.map((g) => {
-                const active = selectedAgeGroup === g;
-                return (
-                  <TouchableOpacity
-                    key={g}
-                    style={[styles.pill, active && styles.pillActive]}
-                    onPress={() => toggleAgeGroup(g)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.pillText, active && styles.pillTextActive]}>{g}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <>
+              <View style={styles.pillRow}>
+                {AGE_GROUP_PRIMARY_OPTIONS.map((g) => {
+                  const active = g === 'Masters' ? (showMastersTiers || isMastersTier(selectedAgeGroup)) : selectedAgeGroup === g;
+                  return (
+                    <TouchableOpacity
+                      key={g}
+                      style={[styles.pill, active && styles.pillActive]}
+                      onPress={() => {
+                        if (g === 'Masters') {
+                          setShowMastersTiers(true);
+                        } else {
+                          setShowMastersTiers(false);
+                          void toggleAgeGroup(g);
+                        }
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.pillText, active && styles.pillTextActive]}>{g}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {(showMastersTiers || isMastersTier(selectedAgeGroup)) ? (
+                <View style={[styles.pillRow, { marginTop: 8 }]}>
+                  {MASTERS_TIERS.map((tier) => {
+                    const active = selectedAgeGroup === tier;
+                    return (
+                      <TouchableOpacity
+                        key={tier}
+                        style={[styles.pill, active && styles.pillActive]}
+                        onPress={() => toggleAgeGroup(tier)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.pillText, active && styles.pillTextActive]}>{tier}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </>
           )}
         </View>
 
