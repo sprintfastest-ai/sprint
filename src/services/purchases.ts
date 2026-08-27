@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import Purchases, { type PurchasesOffering } from 'react-native-purchases';
+import * as Sentry from '@sentry/react-native';
 
 const IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
 const ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
@@ -14,8 +15,18 @@ export function isPurchasesConfigured(): boolean {
 export function configurePurchases(appUserId?: string): void {
   if (configured || !isPurchasesConfigured()) return;
   const apiKey = Platform.OS === 'ios' ? IOS_API_KEY : ANDROID_API_KEY;
-  Purchases.configure({ apiKey: apiKey as string, appUserID: appUserId });
-  configured = true;
+  try {
+    Purchases.configure({ apiKey: apiKey as string, appUserID: appUserId });
+    configured = true;
+  } catch (err) {
+    // A misconfigured/invalid RevenueCat key should degrade to "purchases
+    // unavailable" (every Purchases.* call below already checks
+    // isPurchasesConfigured()-style guards or is itself try/caught), not
+    // take the whole app down. `configured` stays false, so every purchase
+    // action correctly reports itself as unavailable instead of retrying
+    // a call that will only throw again.
+    Sentry.captureException(err, { tags: { context: 'configurePurchases' } });
+  }
 }
 
 export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
