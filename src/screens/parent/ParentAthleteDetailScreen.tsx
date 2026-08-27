@@ -57,7 +57,7 @@ export default function ParentAthleteDetailScreen() {
               {progress.personalBests.map((pb) => (
                 <View key={pb.distance} style={styles.pbCard}>
                   <Text style={styles.pbDistance}>{pb.distance}m</Text>
-                  <Text style={styles.pbTime}>{pb.timeSeconds.toFixed(2)}s</Text>
+                  <Text style={styles.pbTime}>{Number(pb.timeSeconds).toFixed(2)}s</Text>
                 </View>
               ))}
             </View>

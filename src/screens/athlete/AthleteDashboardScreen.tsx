@@ -82,7 +82,7 @@ export default function AthleteDashboardScreen() {
   const todayDay = currentPlan?.days[today.getDay() === 0 ? 6 : today.getDay() - 1];
 
   const pb100m = personalBests.find((pb) => pb.distance === 100);
-  const pb100mStr = pb100m ? `${pb100m.timeSeconds.toFixed(2)}s` : '–';
+  const pb100mStr = pb100m ? `${Number(pb100m.timeSeconds).toFixed(2)}s` : '–';
   const drillNames = todayDay?.drills.slice(0, 4).map((d) => d.name) ?? [];
 
   const sessionCount = sessions.length;
