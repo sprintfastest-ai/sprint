@@ -1,4 +1,5 @@
 import { getTokensForUser, getTokensForUsers, deletePushTokens } from '@/db/queries/pushTokens';
+import { insertNotification, insertNotificationForUsers } from '@/db/queries/notifications';
 import logger from '@/utils/logger';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
@@ -50,13 +51,31 @@ async function sendExpoMessages(messages: ExpoPushMessage[]): Promise<void> {
   }
 }
 
+function notificationType(payload: PushPayload): string {
+  const type = payload.data?.type;
+  return typeof type === 'string' && type ? type : 'general';
+}
+
+// Always persists a notification row, independent of whether the user has
+// a registered push token or granted push permission — the in-app
+// notification list (the bell icon) needs to be complete even for someone
+// running with push disabled, not just a record of what was actually
+// pushed to a device.
 export async function notifyUser(userId: string, payload: PushPayload): Promise<void> {
-  const tokens = await getTokensForUser(userId);
+  const [tokens] = await Promise.all([
+    getTokensForUser(userId),
+    insertNotification(userId, payload.title, payload.body, notificationType(payload), payload.data ?? {})
+      .catch((err) => logger.error('Failed to persist notification', { userId, error: (err as Error).message })),
+  ]);
   await sendExpoMessages(tokens.map((to) => ({ to, ...payload })));
 }
 
 export async function notifyUsers(userIds: string[], payload: PushPayload): Promise<void> {
   if (!userIds.length) return;
-  const tokens = await getTokensForUsers(userIds);
+  const [tokens] = await Promise.all([
+    getTokensForUsers(userIds),
+    insertNotificationForUsers(userIds, payload.title, payload.body, notificationType(payload), payload.data ?? {})
+      .catch((err) => logger.error('Failed to persist notifications', { count: userIds.length, error: (err as Error).message })),
+  ]);
   await sendExpoMessages(tokens.map((to) => ({ to, ...payload })));
 }

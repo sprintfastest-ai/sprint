@@ -104,6 +104,30 @@ export async function sendVerificationEmail(
   });
 }
 
+// There's no "name" field anywhere in this app's data model (Full Name was
+// removed from registration entirely — see RegisterScreen), so the sender
+// is identified by email + role rather than a display name that doesn't exist.
+export async function sendSupportRequest(
+  fromEmail: string,
+  fromRole: string,
+  subject: string,
+  message: string,
+): Promise<void> {
+  await send({
+    from: process.env.EMAIL_FROM,
+    to: process.env.SUPPORT_EMAIL ?? 'support@sprintfastest.com',
+    replyTo: fromEmail,
+    subject: `[In-app support] ${subject}`,
+    html: `
+      <h2>New support request</h2>
+      <p><strong>From:</strong> ${fromEmail} (${fromRole})</p>
+      <p><strong>Subject:</strong> ${subject}</p>
+      <p><strong>Message:</strong></p>
+      <p>${message.replace(/\n/g, '<br>')}</p>
+    `,
+  });
+}
+
 export async function sendParentConsentRequest(
   parentEmail: string,
   athleteEmail: string,
