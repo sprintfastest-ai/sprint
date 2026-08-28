@@ -40,6 +40,24 @@ client.interceptors.request.use(
   (error: AxiosError) => Promise.reject(error),
 );
 
+// Endpoints that never require an existing session — a 401 from one of
+// these means "wrong credentials" / "bad token", not "your session
+// expired". Without this exclusion, a wrong-password login attempt hits
+// this same refresh-then-signout branch below: it tries to silently
+// refresh using whatever's in storage (usually nothing, since the user
+// isn't logged in yet), that fails with an unrelated "No refresh token
+// stored" error, forces a sign-out cycle, and the real "Invalid email or
+// password" message from the backend never reaches the screen — it gets
+// overwritten by the refresh failure instead. Net effect: a wrong
+// password looked like the screen silently reloading with no error shown.
+const NO_REFRESH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/verify-email',
+  '/auth/request-reset',
+  '/auth/reset-password',
+];
+
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value: string) => void;
@@ -64,7 +82,9 @@ client.interceptors.response.use(
       _retry?: boolean;
     };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isNoRefreshPath = NO_REFRESH_PATHS.some((p) => originalRequest.url?.includes(p));
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isNoRefreshPath) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
