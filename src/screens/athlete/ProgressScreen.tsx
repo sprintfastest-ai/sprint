@@ -165,50 +165,40 @@ function PBsTab({
 
   const getPb = (dist: number) => pbs.find((p) => p.distance === dist);
 
+  // Data-driven off the shared DISTANCE_VALUES list so this grid can never
+  // drift out of sync with the Log Time tab's distance picker again (it
+  // used to be 6 hardcoded cards with hardcoded onLogDistance indices —
+  // both silently wrong the moment the shared distance list changed shape).
+  // 100m keeps the hero treatment — it's the distance called out
+  // everywhere else in the app (Dashboard, Profile "100m PB" stat).
   return (
-    <>
-      <View style={styles.pbGrid}>
-        <PBCard dist="20m" pb={getPb(20)} onPress={() => onLogDistance(0)} />
-        <PBCard dist="30m" pb={getPb(30)} onPress={() => onLogDistance(1)} />
-        <PBCard dist="60m" pb={getPb(60)} onPress={() => onLogDistance(2)} />
-
-        {/* 100m hero */}
-        <TouchableOpacity style={styles.pbHero} onPress={() => onLogDistance(3)} activeOpacity={0.8}>
-          <View style={styles.pbHeroHeader}>
-            <Text style={styles.pbDistLabel}>100m</Text>
-            <Ionicons name="trophy" size={18} color="#F05A1A" />
-          </View>
-          <View style={styles.pbHeroTimeRow}>
-            <Text style={styles.pbHeroTime}>
-              {pb100 ? `${pb100.timeSeconds}s` : '—'}
-            </Text>
-          </View>
-          <Text style={styles.pbDate}>
-            {pb100
-              ? `Set ${safeLocaleDate(new Date(pb100.recordedAt), { day: 'numeric', month: 'short' })}`
-              : 'No time logged yet'}
-          </Text>
-          {pb100 && <Sparkline data={[pb100.timeSeconds]} />}
-        </TouchableOpacity>
-
-        <PBCard dist="200m" pb={getPb(200)} onPress={() => onLogDistance(4)} />
-        <View />
-      </View>
-
-      {/* 400m — tappable to log */}
-      <TouchableOpacity style={styles.emptyCard} onPress={() => onLogDistance(5)} activeOpacity={0.8}>
-        <View>
-          <Text style={styles.pbDistLabel}>400m</Text>
-          <Text style={styles.emptyTime}>{getPb(400) ? `${getPb(400)!.timeSeconds}s` : '--'}</Text>
-          <Text style={styles.emptyPrompt}>
-            {getPb(400) ? `Set ${safeLocaleDate(new Date(getPb(400)!.recordedAt), { day: 'numeric', month: 'short' })}` : 'Tap to log your first time'}
-          </Text>
-        </View>
-        <View style={styles.addBtn}>
-          <Text style={styles.addBtnIcon}>{'+'}</Text>
-        </View>
-      </TouchableOpacity>
-    </>
+    <View style={styles.pbGrid}>
+      {DISTANCE_VALUES.map((d) => {
+        const idx = DISTANCE_VALUES.indexOf(d);
+        if (d === 100) {
+          return (
+            <TouchableOpacity key={d} style={styles.pbHero} onPress={() => onLogDistance(idx)} activeOpacity={0.8}>
+              <View style={styles.pbHeroHeader}>
+                <Text style={styles.pbDistLabel}>100m</Text>
+                <Ionicons name="trophy" size={18} color="#F05A1A" />
+              </View>
+              <View style={styles.pbHeroTimeRow}>
+                <Text style={styles.pbHeroTime}>
+                  {pb100 ? `${pb100.timeSeconds}s` : '—'}
+                </Text>
+              </View>
+              <Text style={styles.pbDate}>
+                {pb100
+                  ? `Set ${safeLocaleDate(new Date(pb100.recordedAt), { day: 'numeric', month: 'short' })}`
+                  : 'No time logged yet'}
+              </Text>
+              {pb100 && <Sparkline data={[pb100.timeSeconds]} />}
+            </TouchableOpacity>
+          );
+        }
+        return <PBCard key={d} dist={`${d}m`} pb={getPb(d)} onPress={() => onLogDistance(idx)} />;
+      })}
+    </View>
   );
 }
 
@@ -527,24 +517,6 @@ const styles = StyleSheet.create({
   pbHeroTimeRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginBottom: 2 },
   pbHeroTime: { fontSize: 28, fontWeight: '800', color: COLORS.text, letterSpacing: -0.5, lineHeight: 32 },
   pbTrend: { fontSize: 12, fontWeight: '600', color: COLORS.green },
-
-  emptyCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  emptyTime: { fontSize: 28, fontWeight: '800', color: COLORS.border, letterSpacing: -0.5, lineHeight: 32, marginBottom: 6, marginTop: 4 },
-  emptyPrompt: { fontSize: 13, color: COLORS.orange, fontWeight: '600' },
-  addBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  addBtnIcon: { fontSize: 20, color: COLORS.primary, lineHeight: 24 },
 
   // Horizontally scrollable now that there are 8 distances — a fixed
   // non-scrolling row of flex:1 pills got too cramped to read past ~6.
