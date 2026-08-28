@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { subscriptionApi } from '@/api/subscription';
-import { purchasePremium, restorePurchases, isPurchasesConfigured, getCurrentOffering } from '@/services/purchases';
+import { purchasePremium, restorePurchases, isPurchasesReady, getCurrentOffering } from '@/services/purchases';
 import { useAuthStore } from '@/store/authStore';
 import type { AthleteStackParamList } from '@/navigation/types';
 
@@ -52,7 +52,7 @@ export default function PaywallScreen() {
   const [priceLabel, setPriceLabel] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isPurchasesConfigured()) return;
+    if (!isPurchasesReady()) return;
     getCurrentOffering()
       .then((offering) => {
         const pkg = offering?.availablePackages[0];
@@ -126,7 +126,7 @@ export default function PaywallScreen() {
           ))}
         </View>
 
-        {!isPurchasesConfigured() && (
+        {!isPurchasesReady() && (
           <View style={styles.noticeBanner}>
             <Ionicons name="information-circle-outline" size={16} color={COLORS.grey} />
             <Text style={styles.noticeText}>Premium purchases are coming soon.</Text>
@@ -136,9 +136,9 @@ export default function PaywallScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.upgradeBtn, (purchasing || !isPurchasesConfigured()) && styles.btnDisabled]}
+          style={[styles.upgradeBtn, (purchasing || !isPurchasesReady()) && styles.btnDisabled]}
           onPress={handleUpgrade}
-          disabled={purchasing || !isPurchasesConfigured()}
+          disabled={purchasing || !isPurchasesReady()}
         >
           {purchasing ? (
             <ActivityIndicator color="#fff" />
