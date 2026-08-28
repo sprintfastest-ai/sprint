@@ -160,16 +160,12 @@ export default function AthleteProfileScreen() {
   }, [user]);
 
   const handlePrivacyPolicy = useCallback(() => {
-    Linking.openURL('https://sprintfastest.com/privacy').catch(() =>
-      Alert.alert('Error', 'Could not open the privacy policy.'),
-    );
-  }, []);
+    navigation.navigate('WebView', { url: 'https://sprintfastest.com/privacy', title: 'Privacy Policy' });
+  }, [navigation]);
 
   const handleHelpSupport = useCallback(() => {
-    Linking.openURL('mailto:support@sprintfastest.com').catch(() =>
-      Alert.alert('Help & Support', 'Email us at support@sprintfastest.com'),
-    );
-  }, []);
+    navigation.navigate('ContactSupport');
+  }, [navigation]);
 
   const handleNotifications = useCallback(async () => {
     const { status } = await Notifications.getPermissionsAsync();

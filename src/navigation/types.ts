@@ -36,6 +36,10 @@ export type AthleteStackParamList = {
   Achievements: undefined;
   Leaderboard: undefined;
   Paywall: { context?: string } | undefined;
+  /** In-app browser for external links (Privacy Policy, ToS, etc.) instead of leaving the app. */
+  WebView: { url: string; title: string };
+  ContactSupport: undefined;
+  Notifications: undefined;
 };
 
 export type CoachTabParamList = {
