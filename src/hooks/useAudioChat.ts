@@ -67,6 +67,34 @@ interface WsMessage {
   payload?: Record<string, unknown>;
 }
 
+/**
+ * Right after the iOS microphone permission dialog is dismissed, the app
+ * can briefly report itself as "in the background" to AVAudioSession even
+ * though the permission promise has already resolved — the system dialog's
+ * dismissal animation and the app regaining full foreground audio focus
+ * aren't perfectly synchronous. Audio.Recording.createAsync then throws
+ * "This experience is currently in the background, so the audio session
+ * could not be activated." even though the user is looking right at the
+ * app. It's a timing gap, not a real backgrounding, and it reliably
+ * clears within a few hundred ms — so retry once after a short delay
+ * before giving up.
+ */
+async function createRecordingWithRetry(
+  options: Audio.RecordingOptions,
+  attempt = 0,
+): Promise<{ recording: Audio.Recording }> {
+  try {
+    return await Audio.Recording.createAsync(options);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (attempt === 0 && Platform.OS === 'ios' && message.includes('currently in the background')) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return createRecordingWithRetry(options, attempt + 1);
+    }
+    throw err;
+  }
+}
+
 function sendChunks(socket: WebSocket, sessionId: string, base64: string): void {
   for (let i = 0; i < base64.length; i += CHUNK_SIZE) {
     const isFinal = i + CHUNK_SIZE >= base64.length;
@@ -109,17 +137,22 @@ export function useAudioChat() {
 
   const startRecording = useCallback(async () => {
     setErrorMessage(null);
-    const { status: permStatus } = await Audio.requestPermissionsAsync();
-    if (permStatus !== 'granted') {
-      setErrorMessage('Microphone access is required for voice coaching.');
-      setStatus('error');
-      return;
-    }
+    try {
+      const { status: permStatus } = await Audio.requestPermissionsAsync();
+      if (permStatus !== 'granted') {
+        setErrorMessage('Microphone access is required for voice coaching.');
+        setStatus('error');
+        return;
+      }
 
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    const { recording } = await Audio.Recording.createAsync(RECORDING_OPTIONS);
-    recordingRef.current = recording;
-    setStatus('recording');
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await createRecordingWithRetry(RECORDING_OPTIONS);
+      recordingRef.current = recording;
+      setStatus('recording');
+    } catch (err) {
+      setStatus('error');
+      setErrorMessage(err instanceof Error ? err.message : 'Could not start recording. Please try again.');
+    }
   }, []);
 
   const cancelRecording = useCallback(async () => {
