@@ -51,6 +51,21 @@ export function formatDate(dateString: string): string {
   return safeLocaleDate(new Date(dateString), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Short relative time ("2m ago", "3h ago", "5d ago"), falling back to a plain date past a week. */
+export function timeAgo(dateString: string): string {
+  const then = new Date(dateString).getTime();
+  if (Number.isNaN(then)) return '';
+  const diffMs = Date.now() - then;
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return formatDate(dateString);
+}
+
 export function getWeekStartDate(date: Date = new Date()): string {
   const d = new Date(date);
   const day = d.getDay();

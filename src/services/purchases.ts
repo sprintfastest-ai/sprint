@@ -7,9 +7,28 @@ const ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
 
 let configured = false;
 
-/** Whether RevenueCat has API keys available for this platform/build. */
+/**
+ * Whether RevenueCat has an API key available for this platform/build.
+ * This does NOT mean Purchases.configure() actually succeeded — only that
+ * there's a key to try it with. Use isPurchasesReady() to gate any real
+ * Purchases.* call; this one is only for "should we even attempt this /
+ * show purchase UI at all" checks before configuration has necessarily run.
+ */
 export function isPurchasesConfigured(): boolean {
   return Platform.OS === 'ios' ? !!IOS_API_KEY : !!ANDROID_API_KEY;
+}
+
+/**
+ * Whether Purchases.configure() has actually run successfully. Every real
+ * Purchases.* call (getOfferings, purchasePackage, restorePurchases) must
+ * gate on this, not isPurchasesConfigured() — an invalid/misconfigured key
+ * still has isPurchasesConfigured() === true (the key string exists) but
+ * leaves the native SDK's singleton never created, so any call throws
+ * "There is no singleton instance. Make sure you configure Purchases
+ * before trying to get the default instance."
+ */
+export function isPurchasesReady(): boolean {
+  return configured;
 }
 
 export function configurePurchases(appUserId?: string): void {
@@ -20,23 +39,21 @@ export function configurePurchases(appUserId?: string): void {
     configured = true;
   } catch (err) {
     // A misconfigured/invalid RevenueCat key should degrade to "purchases
-    // unavailable" (every Purchases.* call below already checks
-    // isPurchasesConfigured()-style guards or is itself try/caught), not
-    // take the whole app down. `configured` stays false, so every purchase
-    // action correctly reports itself as unavailable instead of retrying
-    // a call that will only throw again.
+    // unavailable", not take the whole app down. `configured` stays false
+    // — every downstream Purchases.* call gates on isPurchasesReady(), not
+    // isPurchasesConfigured(), so nothing else gets attempted after this.
     Sentry.captureException(err, { tags: { context: 'configurePurchases' } });
   }
 }
 
 export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
-  if (!isPurchasesConfigured()) return null;
+  if (!isPurchasesReady()) return null;
   const offerings = await Purchases.getOfferings();
   return offerings.current;
 }
 
 export async function purchasePremium(pkgIdentifier?: string): Promise<{ success: boolean; error?: string }> {
-  if (!isPurchasesConfigured()) {
+  if (!isPurchasesReady()) {
     return { success: false, error: 'Purchases are not available yet. Please check back soon.' };
   }
   try {
@@ -57,7 +74,7 @@ export async function purchasePremium(pkgIdentifier?: string): Promise<{ success
 }
 
 export async function restorePurchases(): Promise<{ success: boolean; error?: string }> {
-  if (!isPurchasesConfigured()) {
+  if (!isPurchasesReady()) {
     return { success: false, error: 'Purchases are not available yet. Please check back soon.' };
   }
   try {

@@ -7,6 +7,9 @@ import DiagnosisResultsScreen from '@/screens/athlete/DiagnosisResultsScreen';
 import AchievementsScreen from '@/screens/athlete/AchievementsScreen';
 import LeaderboardScreen from '@/screens/athlete/LeaderboardScreen';
 import PaywallScreen from '@/screens/athlete/PaywallScreen';
+import WebViewScreen from '@/screens/athlete/WebViewScreen';
+import ContactSupportScreen from '@/screens/athlete/ContactSupportScreen';
+import NotificationsScreen from '@/screens/athlete/NotificationsScreen';
 
 const Stack = createNativeStackNavigator<AthleteStackParamList>();
 
@@ -19,6 +22,9 @@ export default function AthleteStackNavigator() {
       <Stack.Screen name="Achievements" component={AchievementsScreen} />
       <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
       <Stack.Screen name="Paywall" component={PaywallScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="WebView" component={WebViewScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="ContactSupport" component={ContactSupportScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
     </Stack.Navigator>
   );
 }

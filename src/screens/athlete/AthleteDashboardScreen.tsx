@@ -9,13 +9,14 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { useTraining } from '@/hooks/useTraining';
 import { getWeekStartDate, formatSessionType, safeLocaleDate } from '@/utils/formatters';
 import { profileApi, trainingApi } from '@/api/training';
+import { getNotifications } from '@/api/notifications';
 import type { AthleteTabParamList, AthleteStackParamList } from '@/navigation/types';
 
 const COLORS = {
@@ -41,6 +42,18 @@ export default function AthleteDashboardScreen() {
   const [needsRediagnosis, setNeedsRediagnosis] = React.useState(false);
   const [insight, setInsight] = React.useState<string | null>(null);
   const [insightLoading, setInsightLoading] = React.useState(true);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  // Refetch on every focus, not just mount, so the badge clears after the
+  // athlete visits Notifications and comes back (rather than only updating
+  // on a full remount).
+  useFocusEffect(
+    useCallback(() => {
+      getNotifications(1, 0)
+        .then(({ unreadCount: count }) => setUnreadCount(count))
+        .catch(() => undefined);
+    }, []),
+  );
 
   useEffect(() => {
     loadWeeklyPlan(getWeekStartDate());
@@ -116,10 +129,11 @@ export default function AthleteDashboardScreen() {
         </View>
         <TouchableOpacity
           style={styles.bellBtn}
-          accessibilityLabel="Notifications"
-          onPress={() => navigation.navigate('Profile')}
+          accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+          onPress={() => stackNavigation.navigate('Notifications')}
         >
           <BellIcon />
+          {unreadCount > 0 ? <View style={styles.bellDot} /> : null}
         </TouchableOpacity>
       </View>
 
@@ -387,7 +401,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   date: { fontSize: 13, color: COLORS.grey },
-  bellBtn: { padding: 4 },
+  bellBtn: { padding: 4, position: 'relative' },
+  bellDot: {
+    position: 'absolute',
+    top: 3, right: 3,
+    width: 9, height: 9, borderRadius: 4.5,
+    backgroundColor: COLORS.orange,
+    borderWidth: 1.5, borderColor: COLORS.surface,
+  },
 
   streakCard: {
     marginHorizontal: 20,
