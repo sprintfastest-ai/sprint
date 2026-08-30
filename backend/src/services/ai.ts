@@ -65,11 +65,26 @@ export async function generateWeeklyPlan(
   weekStartDate: string,
   isTaperWeek = false,
 ): Promise<Omit<TrainingPlan, 'id' | 'createdAt'>> {
+  // The "days" array must always cover the full Monday-Sunday week (7
+  // entries, dayNumber 1-7 in order) with rest days explicitly included —
+  // not just trainingDaysPerWeek entries. The client indexes this array
+  // positionally by calendar weekday (AthleteDashboardScreen.tsx,
+  // TrainingScreen.tsx's day strip), so a shorter array silently truncates
+  // the week in the UI: for a 5-day/week athlete, only 5 day-tabs would
+  // ever render and the week would visibly "stop" after the 5th training
+  // day, with no way to even see Saturday/Sunday. This was a real
+  // production bug, not a rest-day design choice — fixed by always
+  // requiring all 7 days here instead of teaching every consumer to do a
+  // dayNumber lookup into a variable-length array.
   const prompt = `
-You are an expert sprint coach. Generate a ${trainingDaysPerWeek}-day sprint training plan for a ${ageGroup} athlete.
+You are an expert sprint coach. Generate a sprint training week for a ${ageGroup} athlete who trains ${trainingDaysPerWeek} day(s) a week.
 ${weaknessType ? `Their primary weakness is: ${weaknessType}.` : ''}
-Week start date: ${weekStartDate}.
+Week start date: ${weekStartDate} (this is a Monday).
 ${isTaperWeek ? `IMPORTANT: This is a RACE TAPER week — the athlete has a race within 7 days. Reduce total training volume by roughly 40-50% (fewer sets/reps, more rest), keep intensity high but sharp and short, prioritize technique and freshness over fatigue, and include race-specific starts/acceleration work. Avoid any high-volume or exhausting sessions.` : ''}
+
+The "days" array must have EXACTLY 7 entries, dayNumber 1 through 7 in order (1 = Monday ${weekStartDate}, 7 = Sunday), covering the whole week — never fewer than 7.
+Exactly ${trainingDaysPerWeek} of those 7 entries are real training days with drills and coaching cues. Spread them sensibly across the week with rest between hard sessions, rather than bunching them all at the start — do not simply fill dayNumber 1 through ${trainingDaysPerWeek}.
+The remaining ${7 - trainingDaysPerWeek} entries are rest days: "sessionType": "rest", "drills": [], and a single short recovery tip in "coachingCues" (e.g. light stretching, hydration, sleep — no training content).
 
 Return ONLY valid JSON matching this exact structure (no markdown, no explanation):
 {
@@ -91,6 +106,12 @@ Return ONLY valid JSON matching this exact structure (no markdown, no explanatio
         }
       ],
       "coachingCues": ["Stay tall", "Relax the shoulders"]
+    },
+    {
+      "dayNumber": 2,
+      "sessionType": "rest",
+      "drills": [],
+      "coachingCues": ["Light stretching and hydration — let yesterday's session absorb."]
     }
   ]
 }
