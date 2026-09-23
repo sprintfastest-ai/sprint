@@ -27,6 +27,7 @@ import {
   sendVerificationEmail,
   sendPasswordReset,
   sendParentConsentRequest,
+  sendWelcome,
 } from '@/services/email';
 import { AppError } from '@/middleware/errorHandler';
 import { ERROR_CODES, UNDER_13_AGE_GROUPS } from '@/utils/constants';
@@ -110,9 +111,17 @@ export async function register(
 
   logger.info('User registered', { userId: createdUser!.id, role, email: normalisedEmail });
 
-  // 4. Send verification email (non-blocking failure — log and continue)
+  // 4. Send verification + welcome emails (non-blocking failure — log and continue).
+  // sendWelcome existed in email.ts but was never actually called anywhere —
+  // registration only ever sent the verification email, never a welcome one.
   sendVerificationEmail(normalisedEmail, verificationToken).catch((err: unknown) =>
     logger.error('Failed to send verification email', {
+      userId: createdUser!.id,
+      error: (err as Error).message,
+    }),
+  );
+  sendWelcome(normalisedEmail, role).catch((err: unknown) =>
+    logger.error('Failed to send welcome email', {
       userId: createdUser!.id,
       error: (err as Error).message,
     }),

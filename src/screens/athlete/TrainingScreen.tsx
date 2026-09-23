@@ -202,6 +202,16 @@ export default function TrainingScreen() {
               <Text style={styles.retryBtnText}>{isPaywallError ? 'Upgrade to Premium' : 'Try Again'}</Text>
             </TouchableOpacity>
           </View>
+        ) : todayDay?.sessionType === 'rest' ? (
+          <View style={styles.sessionCard}>
+            <View style={[styles.cardHeader, styles.restDayHeader]}>
+              <Ionicons name="moon-outline" size={22} color={COLORS.primary} />
+              <Text style={styles.cardTitle}>Rest Day</Text>
+              <Text style={styles.cardSub}>
+                {todayDay.coachingCues[0] ?? 'Recover today — light stretching, hydration, and sleep.'}
+              </Text>
+            </View>
+          </View>
         ) : todayDay ? (
           <View style={styles.sessionCard}>
             <View style={styles.cardHeader}>
@@ -362,6 +372,7 @@ const styles = StyleSheet.create({
   },
 
   cardHeader: { padding: 16, paddingBottom: 12 },
+  restDayHeader: { alignItems: 'center', paddingVertical: 20, gap: 6 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   cardTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, letterSpacing: -0.2, flex: 1 },
   durationPill: {

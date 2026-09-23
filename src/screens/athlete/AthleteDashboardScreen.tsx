@@ -189,6 +189,14 @@ export default function AthleteDashboardScreen() {
           <Text style={styles.sectionLabel}>TODAY'S SESSION</Text>
           {isLoading ? (
             <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 16 }} />
+          ) : todayDay?.sessionType === 'rest' ? (
+            <View style={styles.restDay}>
+              <Ionicons name="moon-outline" size={22} color={COLORS.primary} />
+              <Text style={styles.sessionTitle}>Rest Day</Text>
+              <Text style={styles.restDayText}>
+                {todayDay.coachingCues[0] ?? 'Recover today — light stretching, hydration, and sleep.'}
+              </Text>
+            </View>
           ) : todayDay ? (
             <>
               <Text style={styles.sessionTitle}>{formatSessionType(todayDay.sessionType)}</Text>
@@ -456,6 +464,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 6,
   },
+  restDay: { alignItems: 'center', paddingVertical: 12, gap: 6 },
+  restDayText: { fontSize: 13, color: COLORS.grey, textAlign: 'center', lineHeight: 19, paddingHorizontal: 12 },
   sessionTitle: {
     fontSize: 18,
     fontWeight: '700',
