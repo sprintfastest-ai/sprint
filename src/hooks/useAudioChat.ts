@@ -173,9 +173,24 @@ export function useAudioChat() {
     if (!recording || !accessToken) return;
 
     setStatus('uploading');
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    recordingRef.current = null;
+
+    let uri: string | null;
+    try {
+      await recording.stopAndUnloadAsync();
+      uri = recording.getURI();
+    } catch (err) {
+      // expo-av throws here on Android ("Stop encountered an error: no
+      // valid audio data has been received") when essentially nothing was
+      // captured before stop was called — e.g. tapped stop almost
+      // immediately, or the app was backgrounded mid-recording and the
+      // audio session got interrupted. This was previously unguarded and
+      // surfaced as an unhandled promise rejection in production.
+      setStatus('error');
+      setErrorMessage("Didn't catch any audio — try holding the mic a little longer.");
+      return;
+    } finally {
+      recordingRef.current = null;
+    }
 
     if (!uri) {
       setStatus('error');
